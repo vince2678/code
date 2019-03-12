@@ -99,9 +99,9 @@ namespace tree
         else
         {
             if (this->left && (key < this->key))
-                value = &(this->left->get(key));
+                value = this->left->get(key);
             else if (this->right && (key > this->key))
-                value = &(this->right->get(key));
+                value = this->right->get(key);
         }
         return value;
     }
