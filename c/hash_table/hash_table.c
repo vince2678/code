@@ -26,11 +26,21 @@ int primes[] =
  4159, 4391, 3767, 3967, 4177, 4397, 3769, 3989, 4201,
  4409};
 
+//TODO: Pick primes at random at initialisation
 int hash(struct hash_table_t *t, char *key)
 {
-    int ix = 0;
-    // TODO: Implement a hash function.
-    // Hint: use mod arithetic with some algebraic function
+    unsigned ix = F;
+
+    char *s = key;
+
+    while (*s)
+    {
+        ix = (ix * A) ^ (*s * B);
+        s++;
+    };
+
+    ix = ix % C;
+    ix = ix % t->physical_size;
     return ix;
 }
 
