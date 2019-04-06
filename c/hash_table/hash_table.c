@@ -129,7 +129,7 @@ void * search(struct hash_table_t *t, char *key)
 }
 
 //TODO: Determine if re-hash of entire table is necessary
-void * remove(struct hash_table_t *t, char *key)
+void * delete(struct hash_table_t *t, char *key)
 {
     int ix = t->hash(t, key);
 

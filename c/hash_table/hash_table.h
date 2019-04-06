@@ -15,7 +15,7 @@ typedef struct hash_table_t {
     int (*hash)(struct hash_table_t *, char *key);
     int (*insert)(struct hash_table_t *, char *key, void *value);
     void* (*search)(struct hash_table_t *, char *key);
-    void* (*remove)(struct hash_table_t *, char *key);
+    void* (*delete)(struct hash_table_t *, char *key);
     float (*load_factor)(struct hash_table_t *);
 } hash_table;
 
