@@ -18,7 +18,7 @@ int test_insert(hash_table *t, char **keys, int *values, int n)
         {
             assert(old_size == t->size);
 #ifdef VERBOSE
-            fprintf(stderr, "%s: updated key %s, old value %i, new value %i\n", __func__, keys[i], val, values[i]);
+            fprintf(stderr, "%s: updated key %s, old value %i, new value %i\n", __func__, keys[i], *val, values[i]);
 #endif
         }
         else // new insertion
