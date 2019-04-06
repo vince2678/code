@@ -23,6 +23,7 @@ namespace tree
             T value;
             BST *left;
             BST *right;
+            BST *InOrder(int key);
     };
 
     template <class T>
@@ -91,35 +92,46 @@ namespace tree
     }
 
     template <class T>
+    BST<T>* BST<T>::InOrder(int key)
+    {
+        BST<T>* tree = nullptr;
+
+        if (this->left)
+        {
+             tree = this->left->InOrder(key);
+             if (tree) return tree;
+        }
+
+        if (this->key == key)
+        {
+             return this;
+        }
+
+        if (this->right)
+        {
+             tree = this->right->InOrder(key);
+        }
+
+        return tree;
+    }
+
+    template <class T>
     T* BST<T>::get(int key)
     {
-        T *value = nullptr;
-        if (this->key == key)
-            value = &(this->value);
+        BST<T>* v = this->InOrder(key);
+
+        if (v)
+            return &(v->value);
         else
-        {
-            if (this->left && (key < this->key))
-                value = this->left->get(key);
-            else if (this->right && (key > this->key))
-                value = this->right->get(key);
-        }
-        return value;
+            return nullptr;
+
+        return v ? &(v->value) : nullptr;
     }
 
     template <class T>
     bool BST<T>::contains(int key)
     {
-        bool found = false;
-        if (this->key == key)
-            found = true;
-        else
-        {
-            if (this->left && (key < this->key))
-                found = this->left->contains(key);
-            else if (this->right && (key > this->key))
-                found = this->right->contains(key);
-        }
-        return found;
+        return this->InOrder(key) ? true : false;
     }
 };
 
