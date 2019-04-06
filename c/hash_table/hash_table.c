@@ -80,7 +80,7 @@ int insert(struct hash_table_t *t, char *key, void *value)
 
     while (curr)
     {
-        if (strcmp(key, curr->key))
+        if (strcmp(key, curr->key) == 0)
         {
             curr->value = value;
             return 0;
