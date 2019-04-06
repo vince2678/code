@@ -75,13 +75,6 @@ int insert(struct hash_table_t *t, char *key, void *value)
 {
     int ix = t->hash(t, key);
 
-    if (!t->data)
-    {
-        t->data = initialise_ll(INIT_SIZE);
-        t->physical_size = INIT_SIZE;
-        t->size = 0;
-    }
-
     hash_table_ll *prev = NULL;
     hash_table_ll *curr = t->data[ix];
 
@@ -134,16 +127,7 @@ void * search(struct hash_table_t *t, char *key)
 
     hash_table_ll * curr = NULL;
 
-    if (t->data)
-    {
-        curr = t->data[ix];
-    }
-    else
-    {
-        t->data = initialise_ll(INIT_SIZE);
-        t->physical_size = INIT_SIZE;
-        t->size = 0;
-    };
+    curr = t->data[ix];
 
     while (curr)
     {
@@ -189,4 +173,26 @@ void * delete(struct hash_table_t *t, char *key)
         curr = curr->next;
     }
     return value;
+}
+
+struct hash_table_t* new_hash_table()
+{
+    hash_table *t = malloc(sizeof(hash_table));
+
+    if (!t)
+    {
+        perror("malloc");
+        exit(-EXIT_FAILURE);
+    };
+
+    t->data = initialise_ll(INIT_SIZE);
+    t->physical_size = INIT_SIZE;
+    t->size = 0;
+    t->hash = &hash;
+    t->delete = &delete;
+    t->insert = &insert;
+    t->load_factor = &load_factor;
+    t->search = &search;
+
+    return t;
 }

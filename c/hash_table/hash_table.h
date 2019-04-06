@@ -19,4 +19,6 @@ typedef struct hash_table_t {
     float (*load_factor)(struct hash_table_t *);
 } hash_table;
 
+struct hash_table_t *new_hash_table();
+
 #endif //_HASH_TABLE_H_
