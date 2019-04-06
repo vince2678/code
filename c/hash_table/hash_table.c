@@ -5,7 +5,7 @@
 #include <string.h>
 //#include <errno.h>
 
-#define INIT_SIZE 10
+#define INIT_SIZE 17
 
 int hash(struct hash_table_t *t, char *key)
 {
