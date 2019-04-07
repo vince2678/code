@@ -12,7 +12,7 @@ typedef struct hash_table_t {
     int physical_size;
     int size;
     struct hash_table_ll_t **data;
-    int (*hash)(struct hash_table_t *, char *key);
+    unsigned (*hash)(struct hash_table_t *, char *key);
     int (*insert)(struct hash_table_t *, char *key, void *value);
     void* (*search)(struct hash_table_t *, char *key);
     void* (*delete)(struct hash_table_t *, char *key);

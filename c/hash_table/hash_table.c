@@ -27,7 +27,7 @@ int primes[] =
  4409};
 
 //TODO: Pick primes at random at initialisation
-int hash(struct hash_table_t *t, char *key)
+unsigned hash(struct hash_table_t *t, char *key)
 {
     unsigned ix = F;
 
@@ -73,7 +73,7 @@ struct hash_table_ll_t ** initialise_ll(int m)
 #define INSERT_KEY_SUCCESS 0
 #define INSERT_KEY_EXISTS 1
 
-int insert_into_table(struct hash_table_ll_t **table, int index, char *key, void *value)
+int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key, void *value)
 {
     hash_table_ll *prev = NULL;
     hash_table_ll *curr = table[index];
@@ -121,7 +121,7 @@ int insert_into_table(struct hash_table_ll_t **table, int index, char *key, void
 //TODO: Determine if re-hash of entire table is necessary
 int insert(struct hash_table_t *t, char *key, void *value)
 {
-    int ix = t->hash(t, key);
+    unsigned ix = t->hash(t, key);
     int retval = insert_into_table(t->data, ix, key, value);
 
     if (retval == INSERT_KEY_SUCCESS)
@@ -132,7 +132,7 @@ int insert(struct hash_table_t *t, char *key, void *value)
 
 void * search(struct hash_table_t *t, char *key)
 {
-    int ix = t->hash(t, key);
+    unsigned ix = t->hash(t, key);
 
     void *data = NULL;
 
@@ -155,7 +155,7 @@ void * search(struct hash_table_t *t, char *key)
 //TODO: Determine if re-hash of entire table is necessary
 void * delete(struct hash_table_t *t, char *key)
 {
-    int ix = t->hash(t, key);
+    unsigned ix = t->hash(t, key);
 
     void *value = NULL;
 
