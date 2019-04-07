@@ -70,20 +70,20 @@ struct hash_table_ll_t ** initialise_ll(int m)
     return data;
 }
 
-//TODO: Determine if re-hash of entire table is necessary
-int insert(struct hash_table_t *t, char *key, void *value)
-{
-    int ix = t->hash(t, key);
+#define INSERT_KEY_SUCCESS 0
+#define INSERT_KEY_EXISTS 1
 
+int insert_into_table(struct hash_table_ll_t **table, int index, char *key, void *value)
+{
     hash_table_ll *prev = NULL;
-    hash_table_ll *curr = t->data[ix];
+    hash_table_ll *curr = table[index];
 
     while (curr)
     {
         if (strcmp(key, curr->key) == 0)
         {
             curr->value = value;
-            return 0;
+            return INSERT_KEY_EXISTS;
         }
 
         prev = curr;
@@ -109,12 +109,23 @@ int insert(struct hash_table_t *t, char *key, void *value)
     new->value = value;
     new->next = NULL;
 
-    t->size += 1;
-
     if (prev) /* linked list was already initialised */
         prev->next = new;
     else /* linked list was not initialised */
-        t->data[ix] = new; 
+        table[index] = new;
+
+    return INSERT_KEY_SUCCESS;
+}
+
+
+//TODO: Determine if re-hash of entire table is necessary
+int insert(struct hash_table_t *t, char *key, void *value)
+{
+    int ix = t->hash(t, key);
+    int retval = insert_into_table(t->data, ix, key, value);
+
+    if (retval == INSERT_KEY_SUCCESS)
+        t->size += 1;
 
     return 0;
 }
