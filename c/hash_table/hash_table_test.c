@@ -1,5 +1,5 @@
 #include "hash_table.h"
-#include "stdio.h"
+#include <stdio.h>
 #include <assert.h>
 
 int test_insert(hash_table *t, char **keys, int *values, int n)
