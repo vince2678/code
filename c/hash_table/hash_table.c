@@ -12,6 +12,9 @@
 #define C 3673
 #define F 4079
 
+#define MAX_LOAD 2
+#define GROWTH_FACTOR 1.5
+
 int primes[] =
 {3581, 3779, 4001, 4211, 3583, 3793, 4003, 4217, 3593,
  3797, 4007, 4219, 3607, 3803, 4013, 4229, 3613, 3821,
@@ -119,10 +122,51 @@ int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key,
     return INSERT_KEY_SUCCESS;
 }
 
+void * destroy_ll_node(hash_table_ll *head)
+{
+    hash_table_ll *next = head->next;
+    free(head->key);
+    free(head);
+    return next;
+}
 
-//TODO: Determine if re-hash of entire table is necessary
+#define REHASH_SUCCESS 0
+#define REHASH_UNNCESSESARY 1
+
+/* TODO: Reuse keys instead of deleting them
+   TODO: Use a char[] or int w bitmasks to store or access bool settings
+*/
+int rehash_table(struct hash_table_t *t)
+{
+    if (t->load_factor(t) < MAX_LOAD)
+        return REHASH_UNNCESSESARY;
+
+    int new_size = t->size * GROWTH_FACTOR;
+
+    hash_table_ll **new_table = initialise_ll(new_size);
+
+    for (int i = 0; i < t->physical_size; i++)
+    {
+        hash_table_ll *head = t->data[i];
+
+        while (head)
+        {
+            unsigned index = hash(new_size , head->key);
+            insert_into_table(new_table, index, head->key, head->value);
+            head = destroy_ll_node(head);
+        }
+    }
+    free(t->data);
+    t->data = new_table;
+    t->physical_size = new_size;
+
+    return REHASH_SUCCESS;
+}
+
 int insert(struct hash_table_t *t, char *key, void *value)
 {
+    rehash_table(t);
+
     unsigned ix = t->hash(t->physical_size, key);
     int retval = insert_into_table(t->data, ix, key, value);
 
