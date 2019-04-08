@@ -27,7 +27,7 @@ int primes[] =
  4409};
 
 //TODO: Pick primes at random at initialisation
-unsigned hash(struct hash_table_t *t, char *key)
+unsigned hash(int modulus, char *key)
 {
     unsigned ix = F;
 
@@ -40,10 +40,12 @@ unsigned hash(struct hash_table_t *t, char *key)
     };
 
     ix = ix % C;
-    ix = ix % t->physical_size;
+
+    if (modulus > 0)
+        ix = ix % modulus;
+
     return ix;
 }
-
 
 float load_factor(struct hash_table_t *t)
 {
@@ -121,7 +123,7 @@ int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key,
 //TODO: Determine if re-hash of entire table is necessary
 int insert(struct hash_table_t *t, char *key, void *value)
 {
-    unsigned ix = t->hash(t, key);
+    unsigned ix = t->hash(t->physical_size, key);
     int retval = insert_into_table(t->data, ix, key, value);
 
     if (retval == INSERT_KEY_SUCCESS)
@@ -132,7 +134,7 @@ int insert(struct hash_table_t *t, char *key, void *value)
 
 void * search(struct hash_table_t *t, char *key)
 {
-    unsigned ix = t->hash(t, key);
+    unsigned ix = t->hash(t->physical_size, key);
 
     void *data = NULL;
 
@@ -155,7 +157,7 @@ void * search(struct hash_table_t *t, char *key)
 //TODO: Determine if re-hash of entire table is necessary
 void * delete(struct hash_table_t *t, char *key)
 {
-    unsigned ix = t->hash(t, key);
+    unsigned ix = t->hash(t->physical_size, key);
 
     void *value = NULL;
 
