@@ -64,7 +64,7 @@ struct hash_table_ll_t ** initialise_ll(int m)
     if (!data)
     {
         perror("malloc");
-        exit(-EXIT_FAILURE);
+        return NULL;
     }
 
     for (int i = 0; i < m; i++)
@@ -77,6 +77,7 @@ struct hash_table_ll_t ** initialise_ll(int m)
 
 #define INSERT_KEY_SUCCESS 0
 #define INSERT_KEY_EXISTS 1
+#define INSERT_KEY_FAILURE 2
 
 int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key, void *value)
 {
@@ -100,14 +101,15 @@ int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key,
     if (!new)
     {
         perror("malloc");
-        exit(-EXIT_FAILURE);
+        return INSERT_KEY_FAILURE;
     }
 
     new->key = malloc(sizeof(char) * (strlen(key)+1));
     if (!new->key)
     {
         perror("malloc");
-        exit(-EXIT_FAILURE);
+        free(new);
+        return INSERT_KEY_FAILURE;
     }
     strcpy(new->key, key);
 
@@ -146,6 +148,7 @@ int destroy_ll_table(hash_table_ll **table, int len)
 
 #define REHASH_SUCCESS 0
 #define REHASH_UNNECESSARY 1
+#define REHASH_FAILED 2
 
 /* TODO: Reuse keys instead of deleting them
    TODO: Use a char[] or int w bitmasks to store or access bool settings
@@ -166,7 +169,14 @@ int rehash_table(struct hash_table_t *t)
         while (head)
         {
             unsigned index = hash(new_size , head->key);
-            insert_into_table(new_table, index, head->key, head->value);
+            int retval = insert_into_table(new_table, index, head->key, head->value);
+
+            if (retval == INSERT_KEY_FAILURE)
+            {
+                destroy_ll_table(new_table, new_size);
+                return REHASH_FAILED;
+            }
+
             head = destroy_ll_node(head);
         }
     }
@@ -179,10 +189,13 @@ int rehash_table(struct hash_table_t *t)
 
 int insert(struct hash_table_t *t, char *key, void *value)
 {
-    rehash_table(t);
+    int retval = rehash_table(t);
+
+    if (retval == REHASH_FAILED)
+        return INSERT_KEY_FAILURE;
 
     unsigned ix = t->hash(t->physical_size, key);
-    int retval = insert_into_table(t->data, ix, key, value);
+    retval = insert_into_table(t->data, ix, key, value);
 
     if (retval == INSERT_KEY_SUCCESS)
         t->size += 1;
@@ -253,7 +266,7 @@ struct hash_table_t* new_hash_table()
     if (!t)
     {
         perror("malloc");
-        exit(-EXIT_FAILURE);
+        return NULL;
     };
 
     t->data = initialise_ll(INIT_SIZE);
