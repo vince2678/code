@@ -1,6 +1,7 @@
 #include "hash_table.h"
 #include <stdio.h>
 #include <assert.h>
+#include <stdlib.h>
 
 int test_insert(hash_table *t, char **keys, int *values, int n)
 {
@@ -31,6 +32,69 @@ int test_insert(hash_table *t, char **keys, int *values, int n)
 #endif
         }
     }
+    return 0;
+}
+
+#define MAX_LOAD 2
+#define GROWTH_FACTOR 1.5
+int test_growth()
+{
+    int old_size;
+    char *val;
+
+    hash_table *t = new_hash_table();
+
+    int n = t->physical_size * MAX_LOAD;
+#ifdef VERBOSE
+            fprintf(stderr, "\n");
+#endif
+    for (int i = 0; i < n; i++)
+    {
+        char *key = malloc(sizeof(char)*6);
+
+        snprintf(key, 6, "%i%i", i, i);
+        key[5] = 0;
+
+        old_size = t->size;
+        val = t->search(t, key);
+
+        t->insert(t, key, key);
+
+        assert(t->size == (old_size + 1));
+        val = t->search(t, key);
+        assert(val == key);
+#ifdef VERBOSE
+            fprintf(stderr, " %s: Table size: %i, Physical size: %i, Load factor %.3f\n", __func__, t->size, t->physical_size, t->load_factor(t));
+#endif
+    }
+
+    assert(t->load_factor(t) == MAX_LOAD);
+    assert(t->size == n);
+
+    for (int i = n; i < MAX_LOAD * n; i++)
+    {
+        char *key = malloc(sizeof(char)*6);
+
+        snprintf(key, 6, "%i%i", i, i);
+        key[5] = 0;
+
+        old_size = t->size;
+        val = t->search(t, key);
+
+        t->insert(t, key, key);
+
+        assert(t->size == (old_size + 1));
+        val = t->search(t, key);
+        assert(val == key);
+#ifdef VERBOSE
+            fprintf(stderr, " %s: Table size: %i, Physical size: %i, Load factor %.3f\n", __func__, t->size, t->physical_size, t->load_factor(t));
+#endif
+    }
+    /* since we can't test that the load_factor() is MAX_LOAD/GROWTH_FACTOR
+       directly because of rounding, test the size and physical size instead */
+    assert(t->size == MAX_LOAD * n);
+    assert(t->physical_size == GROWTH_FACTOR * n);
+
     return 0;
 }
 
@@ -78,6 +142,8 @@ int main(int argc, char **argv)
     test_insert(t, keys, values, 6);
     test_delete(t, keys, 6);
     assert(t->size == 0);
+
+    test_growth();
 
     return 0;
 }
