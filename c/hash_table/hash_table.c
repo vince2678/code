@@ -162,6 +162,9 @@ int rehash_table(struct hash_table_t *t)
 
     hash_table_ll **new_table = initialise_ll(new_size);
 
+    if (!new_table)
+        return REHASH_FAILED;
+
     for (int i = 0; i < t->physical_size; i++)
     {
         hash_table_ll *head = t->data[i];
