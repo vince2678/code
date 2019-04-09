@@ -130,6 +130,20 @@ void * destroy_ll_node(hash_table_ll *head)
     return next;
 }
 
+int destroy_ll_table(hash_table_ll **table, int len)
+{
+    for (int i = 0; i < len; i++)
+    {
+        hash_table_ll *head = table[i];
+
+        while (head)
+            head = destroy_ll_node(head);
+    }
+    free(table);
+
+    return 0;
+}
+
 #define REHASH_SUCCESS 0
 #define REHASH_UNNECESSARY 1
 
