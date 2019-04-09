@@ -131,7 +131,7 @@ void * destroy_ll_node(hash_table_ll *head)
 }
 
 #define REHASH_SUCCESS 0
-#define REHASH_UNNCESSESARY 1
+#define REHASH_UNNECESSARY 1
 
 /* TODO: Reuse keys instead of deleting them
    TODO: Use a char[] or int w bitmasks to store or access bool settings
@@ -139,7 +139,7 @@ void * destroy_ll_node(hash_table_ll *head)
 int rehash_table(struct hash_table_t *t)
 {
     if (t->load_factor(t) < MAX_LOAD)
-        return REHASH_UNNCESSESARY;
+        return REHASH_UNNECESSARY;
 
     int new_size = t->size * GROWTH_FACTOR;
 
