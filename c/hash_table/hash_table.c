@@ -272,7 +272,9 @@ struct hash_table_t* new_hash_table()
         return NULL;
     };
 
-    t->data = initialise_ll(INIT_SIZE);
+    if (!(t->data = initialise_ll(INIT_SIZE)))
+        return NULL;
+
     t->physical_size = INIT_SIZE;
     t->size = 0;
     t->hash = &hash;
