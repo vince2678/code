@@ -13,7 +13,9 @@
 #define F 4079
 
 #define MAX_LOAD 2
+#define SHRINK_LOAD 0.25
 #define GROWTH_FACTOR 1.5
+#define SHRINK_FACTOR 0.5
 
 int primes[] =
 {3581, 3779, 4001, 4211, 3583, 3793, 4003, 4217, 3593,
@@ -155,10 +157,14 @@ int destroy_ll_table(hash_table_ll **table, int len)
 */
 int rehash_table(struct hash_table_t *t)
 {
-    if (t->load_factor(t) < MAX_LOAD)
-        return REHASH_UNNECESSARY;
+    int new_size;
 
-    int new_size = t->size * GROWTH_FACTOR;
+    if (t->load_factor(t) >= MAX_LOAD)
+        new_size = t->size * GROWTH_FACTOR;
+    else if (t->load_factor(t) <= SHRINK_LOAD)
+        new_size = t->physical_size * SHRINK_FACTOR;
+    else
+        return REHASH_UNNECESSARY;
 
     hash_table_ll **new_table = initialise_ll(new_size);
 
