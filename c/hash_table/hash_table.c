@@ -237,6 +237,8 @@ void * search(struct hash_table_t *t, char *key)
 //TODO: Determine if re-hash of entire table is necessary
 void * delete(struct hash_table_t *t, char *key)
 {
+    rehash_table(t);
+
     unsigned ix = t->hash(t->physical_size, key);
 
     void *value = NULL;
