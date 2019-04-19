@@ -270,6 +270,38 @@ void * delete(struct hash_table_t *t, char *key)
     return value;
 }
 
+void print_table(hash_table *t)
+{
+    int collisions = 0;
+    for (int i = 0; i < t->physical_size; i++)
+    {
+        printf("\t%i\n", i);
+        hash_table_ll *next = t->data[i];
+        int count = 0;
+
+        while(next)
+        {
+            printf("\t|\n");
+            printf("\t---> ");
+            printf("'%s'\n", next->key);
+            count += 1;
+            next = next->next;
+        }
+        if (count > 1)
+        {
+            printf("\tCollisions at index %i: %i\n", i, count-1);
+            collisions += count - 1;
+        }
+        printf("\n");
+    }
+    printf("Total # of collisions: %i\n", collisions);
+    printf("Total # of elements: %i\n", t->size);
+    printf("Physical array size: %i\n", t->physical_size);
+    printf("collisions/count: %.2f\n", (float) collisions / t->size);
+    printf("Load factor: %.2f\n", t->load_factor(t));
+    printf("\n");
+}
+
 struct hash_table_t* new_hash_table()
 {
     hash_table *t = malloc(sizeof(hash_table));
