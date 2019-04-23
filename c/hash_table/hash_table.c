@@ -292,7 +292,10 @@ void print_table(hash_table *t)
     printf("Total # of collisions: %i\n", collisions);
     printf("Total # of elements: %i\n", t->size);
     printf("Physical array size: %i\n", t->physical_size);
-    printf("collisions/count: %.2f\n", (float) collisions / t->size);
+
+    if (t->size)
+        printf("collisions/size: %.2f\n", (float) collisions / t->size);
+
     printf("Load factor: %.2f\n", t->load_factor(t));
     printf("\n");
 }
