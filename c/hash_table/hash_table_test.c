@@ -45,9 +45,7 @@ int test_growth(int flags)
     hash_table *t = new_hash_table(flags);
 
     int n = t->physical_size * MAX_LOAD;
-#ifdef VERBOSE
-            fprintf(stderr, "\n");
-#endif
+
     for (int i = 0; i < n; i++)
     {
         char *key = malloc(sizeof(char) * STR_SIZE);
@@ -63,13 +61,15 @@ int test_growth(int flags)
         assert(t->size == (old_size + 1));
         val = t->search(t, key);
         assert(val == key);
-#ifdef VERBOSE
-            fprintf(stderr, " %s: Table size: %i, Physical size: %i, Load factor %.3f\n", __func__, t->size, t->physical_size, t->load_factor(t));
-#endif
     }
 
     assert(t->load_factor(t) == MAX_LOAD);
     assert(t->size == n);
+
+#ifdef VERBOSE
+    fprintf(stderr, "\nGrowth test:\n");
+    print_table(t);
+#endif
 
     for (int i = n; i < MAX_LOAD * n; i++)
     {
@@ -86,9 +86,6 @@ int test_growth(int flags)
         assert(t->size == (old_size + 1));
         val = t->search(t, key);
         assert(val == key);
-#ifdef VERBOSE
-            fprintf(stderr, " %s: Table size: %i, Physical size: %i, Load factor %.3f\n", __func__, t->size, t->physical_size, t->load_factor(t));
-#endif
     }
     /* since we can't test that the load_factor() is MAX_LOAD/GROWTH_FACTOR
        directly because of rounding, test the size and physical size instead */
