@@ -150,6 +150,12 @@ int destroy_ll_table(int flags, hash_table_ll **table, int len)
     return 0;
 }
 
+void destroy_hash_table(hash_table *t)
+{
+    destroy_ll_table(t->flags, t->table, t->physical_size);
+    free(t);
+}
+
 int rehash_table(struct hash_table_t *t)
 {
     int new_size;

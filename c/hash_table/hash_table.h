@@ -39,6 +39,7 @@ typedef struct hash_table_t {
 } hash_table;
 
 struct hash_table_t *new_hash_table(int flags);
+void destroy_hash_table(hash_table *t);
 void print_table(hash_table *t);
 
 #endif //_HASH_TABLE_H_
