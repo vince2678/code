@@ -5,12 +5,14 @@
 #include <string.h>
 //#include <errno.h>
 
+#include <time.h>
+
 #define INIT_SIZE 17
 
-#define A 3931
-#define B 4409
-#define C 3673
-#define F 4079
+int A = 0;
+int B = 0;
+int C = 0;
+int F = 0;
 
 #define MAX_LOAD 2
 #define SHRINK_LOAD 0.25
@@ -322,6 +324,20 @@ struct hash_table_t* new_hash_table()
     t->insert = &insert;
     t->load_factor = &load_factor;
     t->search = &search;
+
+    int prime_len = sizeof(primes)/sizeof(int) - 1;
+
+    /* seed rng */
+    srand(time(NULL));
+
+    /* get primes */
+    if (A == 0)
+    {
+        A = primes[rand() % prime_len];
+        B = primes[rand() % prime_len];
+        C = primes[rand() % prime_len];
+        F = primes[rand() % prime_len];
+    }
 
     return t;
 }
