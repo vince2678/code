@@ -15,6 +15,10 @@
 #define REHASH_UNNECESSARY 1
 #define REHASH_FAILED 2
 
+#define FREE_KEY_ON_DELETE (1)
+#define COPY_KEY_ON_INSERT (3)
+#define FREE_VALUE_ON_DELETE (4)
+
 // TODO: use a doubly linked list for faster deletion
 typedef struct hash_table_ll_t {
     char *key;
@@ -23,6 +27,7 @@ typedef struct hash_table_ll_t {
 } hash_table_ll;
 
 typedef struct hash_table_t {
+    int flags;
     int physical_size;
     int size;
     struct hash_table_ll_t **table;
@@ -33,7 +38,7 @@ typedef struct hash_table_t {
     float (*load_factor)(struct hash_table_t *);
 } hash_table;
 
-struct hash_table_t *new_hash_table();
+struct hash_table_t *new_hash_table(int flags);
 void print_table(hash_table *t);
 
 #endif //_HASH_TABLE_H_

@@ -69,7 +69,7 @@ struct hash_table_ll_t ** initialise_ll(int m)
     return table;
 }
 
-int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key, void *value)
+int insert_into_table(int flags, struct hash_table_ll_t **table, unsigned index, char *key, void *value)
 {
     hash_table_ll *prev = NULL;
     hash_table_ll *curr = table[index];
@@ -94,14 +94,21 @@ int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key,
         return INSERT_KEY_FAILURE;
     }
 
-    new->key = malloc(sizeof(char) * (strlen(key)+1));
-    if (!new->key)
+    if (flags & COPY_KEY_ON_INSERT)
     {
-        perror("malloc");
-        free(new);
-        return INSERT_KEY_FAILURE;
+        new->key = malloc(sizeof(char) * (strlen(key)+1));
+        if (!new->key)
+        {
+            perror("malloc");
+            free(new);
+            return INSERT_KEY_FAILURE;
+        }
+        strcpy(new->key, key);
     }
-    strcpy(new->key, key);
+    else
+    {
+        new->key = key;
+    }
 
     new->value = value;
     new->next = NULL;
@@ -114,31 +121,35 @@ int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key,
     return INSERT_KEY_SUCCESS;
 }
 
-void * destroy_ll_node(hash_table_ll *head)
+void * destroy_ll_node(int flags, hash_table_ll *head)
 {
     hash_table_ll *next = head->next;
-    free(head->key);
+
+    if (flags & FREE_VALUE_ON_DELETE)
+        free(head->value);
+
+    if (flags & FREE_KEY_ON_DELETE)
+        free(head->key);
+
     free(head);
+
     return next;
 }
 
-int destroy_ll_table(hash_table_ll **table, int len)
+int destroy_ll_table(int flags, hash_table_ll **table, int len)
 {
     for (int i = 0; i < len; i++)
     {
         hash_table_ll *head = table[i];
 
         while (head)
-            head = destroy_ll_node(head);
+            head = destroy_ll_node(flags, head);
     }
     free(table);
 
     return 0;
 }
 
-/* TODO: Reuse keys instead of deleting them
-   TODO: Use a char[] or int w bitmasks to store or access bool settings
-*/
 int rehash_table(struct hash_table_t *t)
 {
     int new_size;
@@ -162,15 +173,14 @@ int rehash_table(struct hash_table_t *t)
         while (head)
         {
             unsigned index = hash(new_size , head->key);
-            int retval = insert_into_table(new_table, index, head->key, head->value);
+            int retval = insert_into_table(t->flags, new_table, index, head->key, head->value);
 
             if (retval == INSERT_KEY_FAILURE)
             {
-                destroy_ll_table(new_table, new_size);
+                destroy_ll_table(t->flags, new_table, new_size);
                 return REHASH_FAILED;
             }
-
-            head = destroy_ll_node(head);
+            head = destroy_ll_node(t->flags, head);
         }
     }
     free(t->table);
@@ -188,7 +198,7 @@ int insert(struct hash_table_t *t, char *key, void *value)
         return INSERT_KEY_FAILURE;
 
     unsigned ix = t->hash(t->physical_size, key);
-    retval = insert_into_table(t->table, ix, key, value);
+    retval = insert_into_table(t->flags, t->table, ix, key, value);
 
     if (retval == INSERT_KEY_SUCCESS)
         t->size += 1;
@@ -235,15 +245,13 @@ void * delete(struct hash_table_t *t, char *key)
         {
             if (prev)
             {
-                prev->next = curr->next;
+                prev->next = destroy_ll_node(t->flags, curr);
             }
             else
             {
-                t->table[ix] = curr->next;
+                t->table[ix] = destroy_ll_node(t->flags, curr);
             }
-            value = curr->value;
-            free(curr->key);
-            free(curr);
+
             t->size -= 1;
             break;
         }
@@ -288,7 +296,7 @@ void print_table(hash_table *t)
     printf("\n");
 }
 
-struct hash_table_t* new_hash_table()
+struct hash_table_t* new_hash_table(int flags)
 {
     hash_table *t = malloc(sizeof(hash_table));
 
@@ -303,6 +311,7 @@ struct hash_table_t* new_hash_table()
 
     t->physical_size = INIT_SIZE;
     t->size = 0;
+    t->flags = flags;
     t->hash = &hash;
     t->delete = &delete;
     t->insert = &insert;

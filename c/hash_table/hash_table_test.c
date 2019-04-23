@@ -35,12 +35,12 @@ int test_insert(hash_table *t, char **keys, int *values, int n)
     return 0;
 }
 
-int test_growth()
+int test_growth(int flags)
 {
     int old_size;
     char *val;
 
-    hash_table *t = new_hash_table();
+    hash_table *t = new_hash_table(flags);
 
     int n = t->physical_size * MAX_LOAD;
 #ifdef VERBOSE
@@ -131,7 +131,9 @@ int test_delete(hash_table *t, char **keys, int n)
 
 int main(int argc, char **argv)
 {
-    hash_table *t = new_hash_table();
+    int flags = 0;
+
+    hash_table *t = new_hash_table(flags);
 
     char *keys[] = {"one", "two", "three", "four", "five", "one"};
     int values[] = {1,2,3,4,5,-1};
@@ -141,7 +143,16 @@ int main(int argc, char **argv)
     test_delete(t, keys, 6);
     assert(t->size == 0);
 
-    test_growth();
+    test_growth(flags);
+
+    flags = COPY_KEY_ON_INSERT;
+    t->flags = flags;
+
+    test_insert(t, keys, values, 6);
+    test_delete(t, keys, 6);
+    assert(t->size == 0);
+
+    test_growth(flags);
 
     return 0;
 }
