@@ -7,6 +7,14 @@
 #define GROWTH_FACTOR 1.5
 #define SHRINK_FACTOR (1.0/GROWTH_FACTOR)
 
+#define INSERT_KEY_SUCCESS 0
+#define INSERT_KEY_EXISTS 1
+#define INSERT_KEY_FAILURE 2
+
+#define REHASH_SUCCESS 0
+#define REHASH_UNNECESSARY 1
+#define REHASH_FAILED 2
+
 // TODO: use a doubly linked list for faster deletion
 typedef struct hash_table_ll_t {
     char *key;

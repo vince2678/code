@@ -72,10 +72,6 @@ struct hash_table_ll_t ** initialise_ll(int m)
     return data;
 }
 
-#define INSERT_KEY_SUCCESS 0
-#define INSERT_KEY_EXISTS 1
-#define INSERT_KEY_FAILURE 2
-
 int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key, void *value)
 {
     hash_table_ll *prev = NULL;
@@ -142,10 +138,6 @@ int destroy_ll_table(hash_table_ll **table, int len)
 
     return 0;
 }
-
-#define REHASH_SUCCESS 0
-#define REHASH_UNNECESSARY 1
-#define REHASH_FAILED 2
 
 /* TODO: Reuse keys instead of deleting them
    TODO: Use a char[] or int w bitmasks to store or access bool settings
