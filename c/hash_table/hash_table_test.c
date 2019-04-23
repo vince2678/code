@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdlib.h>
 
+#define STR_SIZE 256
+
 int test_insert(hash_table *t, char **keys, int *values, int n)
 {
     int old_size;
@@ -48,10 +50,10 @@ int test_growth(int flags)
 #endif
     for (int i = 0; i < n; i++)
     {
-        char *key = malloc(sizeof(char)*6);
+        char *key = malloc(sizeof(char) * STR_SIZE);
 
-        snprintf(key, 6, "%i%i", i, i);
-        key[5] = 0;
+        snprintf(key, STR_SIZE, "%i%i", i, i);
+        key[STR_SIZE - 1] = 0;
 
         old_size = t->size;
         val = t->search(t, key);
