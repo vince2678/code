@@ -53,9 +53,9 @@ float load_factor(struct hash_table_t *t)
 //TODO: Use a bit array with bit masks to indicate used slots
 struct hash_table_ll_t ** initialise_ll(int m)
 {
-    hash_table_ll **data = malloc(sizeof(hash_table_ll*) * m);
+    hash_table_ll **table = malloc(sizeof(hash_table_ll*) * m);
 
-    if (!data)
+    if (!table)
     {
         perror("malloc");
         return NULL;
@@ -63,10 +63,10 @@ struct hash_table_ll_t ** initialise_ll(int m)
 
     for (int i = 0; i < m; i++)
     {
-        data[i] = NULL;
+        table[i] = NULL;
     }
 
-    return data;
+    return table;
 }
 
 int insert_into_table(struct hash_table_ll_t **table, unsigned index, char *key, void *value)
@@ -157,7 +157,7 @@ int rehash_table(struct hash_table_t *t)
 
     for (int i = 0; i < t->physical_size; i++)
     {
-        hash_table_ll *head = t->data[i];
+        hash_table_ll *head = t->table[i];
 
         while (head)
         {
@@ -173,8 +173,8 @@ int rehash_table(struct hash_table_t *t)
             head = destroy_ll_node(head);
         }
     }
-    free(t->data);
-    t->data = new_table;
+    free(t->table);
+    t->table = new_table;
     t->physical_size = new_size;
 
     return REHASH_SUCCESS;
@@ -188,7 +188,7 @@ int insert(struct hash_table_t *t, char *key, void *value)
         return INSERT_KEY_FAILURE;
 
     unsigned ix = t->hash(t->physical_size, key);
-    retval = insert_into_table(t->data, ix, key, value);
+    retval = insert_into_table(t->table, ix, key, value);
 
     if (retval == INSERT_KEY_SUCCESS)
         t->size += 1;
@@ -204,7 +204,7 @@ void * search(struct hash_table_t *t, char *key)
 
     hash_table_ll * curr = NULL;
 
-    curr = t->data[ix];
+    curr = t->table[ix];
 
     while (curr)
     {
@@ -227,7 +227,7 @@ void * delete(struct hash_table_t *t, char *key)
     void *value = NULL;
 
     hash_table_ll *prev = NULL;
-    hash_table_ll *curr = t->data[ix];
+    hash_table_ll *curr = t->table[ix];
 
     while(curr)
     {
@@ -239,7 +239,7 @@ void * delete(struct hash_table_t *t, char *key)
             }
             else
             {
-                t->data[ix] = curr->next;
+                t->table[ix] = curr->next;
             }
             value = curr->value;
             free(curr->key);
@@ -259,7 +259,7 @@ void print_table(hash_table *t)
     for (int i = 0; i < t->physical_size; i++)
     {
         printf("\t%i\n", i);
-        hash_table_ll *next = t->data[i];
+        hash_table_ll *next = t->table[i];
         int count = 0;
 
         while(next)
@@ -298,7 +298,7 @@ struct hash_table_t* new_hash_table()
         return NULL;
     };
 
-    if (!(t->data = initialise_ll(INIT_SIZE)))
+    if (!(t->table = initialise_ll(INIT_SIZE)))
         return NULL;
 
     t->physical_size = INIT_SIZE;

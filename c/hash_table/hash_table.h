@@ -25,7 +25,7 @@ typedef struct hash_table_ll_t {
 typedef struct hash_table_t {
     int physical_size;
     int size;
-    struct hash_table_ll_t **data;
+    struct hash_table_ll_t **table;
     unsigned (*hash)(int, char *key);
     int (*insert)(struct hash_table_t *, char *key, void *value);
     void* (*search)(struct hash_table_t *, char *key);
