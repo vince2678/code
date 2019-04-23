@@ -136,7 +136,7 @@ void * destroy_ll_node(int flags, hash_table_ll *head)
     return next;
 }
 
-int destroy_ll_table(int flags, hash_table_ll **table, int len)
+void destroy_ll_table(int flags, hash_table_ll **table, int len)
 {
     for (int i = 0; i < len; i++)
     {
@@ -146,8 +146,6 @@ int destroy_ll_table(int flags, hash_table_ll **table, int len)
             head = destroy_ll_node(flags, head);
     }
     free(table);
-
-    return 0;
 }
 
 void destroy_hash_table(hash_table *t)
