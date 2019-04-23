@@ -163,7 +163,7 @@ int rehash_table(struct hash_table_t *t)
 
     if (t->load_factor(t) >= MAX_LOAD)
         new_size = t->size * GROWTH_FACTOR;
-    else if (t->load_factor(t) && (t->load_factor(t) <= SHRINK_LOAD))
+    else if (t->size > INIT_SIZE && (t->load_factor(t) <= SHRINK_LOAD))
         new_size = t->physical_size * SHRINK_FACTOR;
     else
         return REHASH_UNNECESSARY;
