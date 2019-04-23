@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-//#include <errno.h>
-
 #include <time.h>
 
 int A = 0;
@@ -26,7 +24,6 @@ int primes[] =
  4159, 4391, 3767, 3967, 4177, 4397, 3769, 3989, 4201,
  4409};
 
-//TODO: Pick primes at random at initialisation
 unsigned hash(int modulus, char *key)
 {
     unsigned ix = F;
@@ -221,7 +218,6 @@ void * search(struct hash_table_t *t, char *key)
     return data;
 }
 
-//TODO: Determine if re-hash of entire table is necessary
 void * delete(struct hash_table_t *t, char *key)
 {
     rehash_table(t);
