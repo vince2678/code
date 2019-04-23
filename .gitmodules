@@ -1,3 +1,6 @@
 [submodule "html"]
 	path = html
 	url = https://github.com/vince2678/html.git
+[submodule "c/vsh"]
+	path = c/vsh
+	url = ssh://git@github.com/vince2678/vsh
