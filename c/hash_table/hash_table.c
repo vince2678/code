@@ -7,17 +7,10 @@
 
 #include <time.h>
 
-#define INIT_SIZE 17
-
 int A = 0;
 int B = 0;
 int C = 0;
 int F = 0;
-
-#define MAX_LOAD 2
-#define SHRINK_LOAD (1.0/MAX_LOAD)
-#define GROWTH_FACTOR 1.5
-#define SHRINK_FACTOR (1.0/GROWTH_FACTOR)
 
 int primes[] =
 {3581, 3779, 4001, 4211, 3583, 3793, 4003, 4217, 3593,

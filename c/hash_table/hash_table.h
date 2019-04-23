@@ -1,6 +1,12 @@
 #ifndef _HASH_TABLE_H_
 #define _HASH_TABLE_H_
 
+#define INIT_SIZE 17
+#define MAX_LOAD 2
+#define SHRINK_LOAD (1.0/MAX_LOAD)
+#define GROWTH_FACTOR 1.5
+#define SHRINK_FACTOR (1.0/GROWTH_FACTOR)
+
 // TODO: use a doubly linked list for faster deletion
 typedef struct hash_table_ll_t {
     char *key;

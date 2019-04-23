@@ -35,8 +35,6 @@ int test_insert(hash_table *t, char **keys, int *values, int n)
     return 0;
 }
 
-#define MAX_LOAD 2
-#define GROWTH_FACTOR 1.5
 int test_growth()
 {
     int old_size;
