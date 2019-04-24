@@ -73,11 +73,11 @@ float load_factor(struct hash_table_t *t)
 //TODO: Use a bit array with bit masks to indicate used slots
 struct hash_table_ll_t ** initialise_ll(int m)
 {
-    hash_table_ll **table = malloc(sizeof(hash_table_ll*) * m);
+    hash_table_ll **table = calloc(m, sizeof(hash_table_ll*));
 
     if (!table)
     {
-        perror("malloc");
+        perror("calloc");
         return NULL;
     }
 
@@ -116,10 +116,10 @@ int insert_into_table(int flags, struct hash_table_ll_t **table, unsigned index,
 
     if (flags & COPY_KEY_ON_INSERT)
     {
-        new->key = malloc(sizeof(char) * (strlen(key)+1));
+        new->key = calloc((strlen(key) + 1), sizeof(char));
         if (!new->key)
         {
-            perror("malloc");
+            perror("calloc");
             free(new);
             return INSERT_KEY_FAILURE;
         }
