@@ -6,7 +6,7 @@ typedef struct circular_buf_t
     int pos;
     int size;
     int capacity;
-    void *buf;
+    void **buf;
 
     void *(*get)(struct circular_buf_t *cbuf, int index);
     void *(*pop)(struct circular_buf_t *cbuf);
