@@ -16,7 +16,16 @@ void *get(struct circular_buf_t *cbuf, int index)
 
 void *pop(struct circular_buf_t *cbuf)
 {
-    return NULL;
+    if (cbuf->size == 0)
+        return NULL;
+
+    void *data;
+
+    data = cbuf->buf[cbuf->pos];
+    cbuf->pos = (cbuf->pos + 1) % cbuf->capacity;
+    cbuf->size = cbuf->size - 1;
+
+    return data;
 }
 int push(struct circular_buf_t *cbuf, void * data)
 {
