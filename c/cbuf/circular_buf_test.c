@@ -22,6 +22,7 @@ void test_push(int capacity)
     {
         perror("calloc");
         fprintf(stderr, "%s: Failed to allocate memory\n", __func__);
+        delete_circular_buf(cbuf);
         return;
     }
 
@@ -77,6 +78,7 @@ void test_pop(int capacity)
     {
         perror("calloc");
         fprintf(stderr, "%s: Failed to allocate memory\n", __func__);
+        delete_circular_buf(cbuf);
         return;
     }
 
