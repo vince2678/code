@@ -29,6 +29,21 @@ void *pop(struct circular_buf_t *cbuf)
 }
 int push(struct circular_buf_t *cbuf, void * data)
 {
+    int i;
+
+    if (cbuf->size < cbuf->capacity)
+    {
+        i = cbuf->size;
+        cbuf->size = i + 1;
+    }
+    else
+    {
+        i = cbuf->pos;
+        cbuf->pos = (i + 1) % cbuf->capacity;
+    }
+
+    cbuf->buf[i] = data;
+
     return 0;
 }
 
