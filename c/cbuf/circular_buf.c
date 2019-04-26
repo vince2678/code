@@ -5,7 +5,13 @@
 
 void *get(struct circular_buf_t *cbuf, int index)
 {
-    return NULL;
+    int adj_i;
+    void *data;
+
+    adj_i = index % cbuf->capacity;
+    data = cbuf->buf[adj_i];
+
+    return data;
 }
 
 void *pop(struct circular_buf_t *cbuf)
