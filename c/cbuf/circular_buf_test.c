@@ -96,7 +96,7 @@ void test_pop(int capacity)
         b = cbuf->size;
         c = (int *)(cbuf->pop(cbuf));
 
-        assert(cbuf->pos == a + 1);
+        assert(cbuf->pos == (a + 1) % capacity);
         assert(cbuf->size == b - 1);
         assert(*c == nums[i]);
     }
