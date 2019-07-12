@@ -21,7 +21,7 @@ class Stack:
             node.prev = prev
             prev.next = node
             self.start.prev = node
-    
+
         self.length = self.length + 1
     
     def pop(self):
@@ -43,7 +43,7 @@ class Stack:
 
             ret = node.data
             del node
-
+        
         self.length = self.length - 1
 
         return ret
@@ -83,6 +83,58 @@ class Stack:
         s += "])"
         
         return s
+
+    def __repr__(self):
+        return self.__str__()
+
+    
+class SetOfStacks:
+
+    def __init__(self, maxsize, stacks = [Stack()]):
+        self.max = maxsize
+        self.lengths = []
+
+        for stack in stacks:
+            l = len(stack)
+
+            assert(l <= self.max), "Stack {} size exceeds specified maximum!".format(stack)
+
+            self.lengths.append(l)
+
+        self.stacks = stacks
+
+    def push(self, data):
+
+        if self.lengths[-1] < self.max:
+            self.stacks[-1].push(data)
+            self.lengths[-1] = self.lengths[-1] + 1
+        else:
+            self.lengths.append(1)
+            self.stacks.append(Stack([data]))
+    
+    def pop(self):
+
+        assert(self.lengths[-1] != 0), "There are no elements in the SetOfStacks!"
+
+        ret = self.stacks[-1].pop()
+        self.lengths[-1] = self.lengths[-1] - 1
+
+        if (self.lengths[-1] == 0) and (len(self.lengths) > 1):
+            self.lengths.pop()
+            stack = self.stacks.pop()
+            del stack
+
+        return ret
+
+    def peek(self):
+        assert(self.lengths[-1] != 0), "There are no elements in the SetOfStacks!"
+        return self.stacks[-1].peek()
+
+    def __len__(self):
+        return sum(self.lengths)
+
+    def __str__(self):
+        return "SetOfStacks({}, {})".format(self.max, self.stacks)
 
     def __repr__(self):
         return self.__str__()
