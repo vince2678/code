@@ -92,37 +92,29 @@ class SetOfStacks:
 
     def __init__(self, maxsize, stacks = [Stack()]):
         self.max = maxsize
-        self.lengths = []
 
         for stack in stacks:
-            l = len(stack)
 
-            assert(l <= self.max), "Stack {} size exceeds specified maximum!".format(stack)
-
-            self.lengths.append(l)
+            assert(len(stack) <= self.max), "Stack {} size exceeds specified maximum!".format(stack)
 
         self.stacks = stacks
 
     def push(self, data):
 
-        if self.lengths[-1] < self.max:
+        if len(self.stacks[-1]) < self.max:
             self.stacks[-1].push(data)
-            self.lengths[-1] = self.lengths[-1] + 1
         else:
-            self.lengths.append(1)
             self.stacks.append(Stack([data]))
     
     def pop(self):
 
-        while (self.lengths[-1] == 0) and (len(self.lengths) > 1):
-            self.lengths.pop()
+        while (len(self.stacks[-1]) == 0) and (len(self.stacks) > 1):
             stack = self.stacks.pop()
             del stack
 
-        assert(self.lengths[-1] != 0), "There are no elements in the SetOfStacks!"
+        assert(len(self.stacks[-1]) != 0), "There are no elements in the SetOfStacks!"
 
         ret = self.stacks[-1].pop()
-        self.lengths[-1] = self.lengths[-1] - 1 
 
         return ret
 
@@ -131,16 +123,15 @@ class SetOfStacks:
         assert(index + 1 <= len(self.stacks)), "Index out of range"
 
         ret = self.stacks[index].pop()
-        self.lengths[index] = self.lengths[index] - 1
 
         return ret
 
     def peek(self):
-        assert(self.lengths[-1] != 0), "There are no elements in the SetOfStacks!"
+        assert(len(self.stacks[-1]) != 0), "There are no elements in the SetOfStacks!"
         return self.stacks[-1].peek()
 
     def __len__(self):
-        return sum(self.lengths)
+        return sum([len(x) for x in self.stacks])
 
     def __str__(self):
         return "SetOfStacks({}, {})".format(self.max, self.stacks)
