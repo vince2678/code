@@ -4,6 +4,7 @@ class Stack:
 
     def __init__(self, elems = []):
         self.start = None
+        self.length = 0
 
         for data in elems:
             self.push(data)
@@ -20,6 +21,8 @@ class Stack:
             node.prev = prev
             prev.next = node
             self.start.prev = node
+    
+        self.length = self.length + 1
     
     def pop(self):
 
@@ -41,6 +44,8 @@ class Stack:
             ret = node.data
             del node
 
+        self.length = self.length - 1
+
         return ret
 
     def peek(self):
@@ -56,6 +61,9 @@ class Stack:
             ret = node.data
 
         return ret
+
+    def __len__(self):
+        return self.length
 
     def __str__(self):
         
