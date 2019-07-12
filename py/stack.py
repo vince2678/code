@@ -126,6 +126,15 @@ class SetOfStacks:
 
         return ret
 
+    def popAt(self, index):
+        
+        assert(index + 1 <= len(self.stacks)), "Index out of range"
+
+        ret = self.stacks[index].pop()
+        self.lengths[index] = self.lengths[index] - 1
+
+        return ret
+
     def peek(self):
         assert(self.lengths[-1] != 0), "There are no elements in the SetOfStacks!"
         return self.stacks[-1].peek()
