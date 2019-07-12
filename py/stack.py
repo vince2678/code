@@ -114,15 +114,15 @@ class SetOfStacks:
     
     def pop(self):
 
-        assert(self.lengths[-1] != 0), "There are no elements in the SetOfStacks!"
-
-        ret = self.stacks[-1].pop()
-        self.lengths[-1] = self.lengths[-1] - 1
-
-        if (self.lengths[-1] == 0) and (len(self.lengths) > 1):
+        while (self.lengths[-1] == 0) and (len(self.lengths) > 1):
             self.lengths.pop()
             stack = self.stacks.pop()
             del stack
+
+        assert(self.lengths[-1] != 0), "There are no elements in the SetOfStacks!"
+
+        ret = self.stacks[-1].pop()
+        self.lengths[-1] = self.lengths[-1] - 1 
 
         return ret
 
