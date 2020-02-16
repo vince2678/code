@@ -203,6 +203,13 @@ function clonevm()
     return $?
 }
 
+function resumevm()
+{
+    echo "Resuming vm ${1}..."
+    $VBOXPATH controlvm "$1" resume
+    return $?
+}
+
 function pausevm()
 {
     echo "Pausing vm ${1}..."
