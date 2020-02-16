@@ -91,7 +91,7 @@ function main_fn()
             local NEXT_NUMBER=$?
 
             if [ -z "$NEXT_NUMBER" ]; then
-                echo "Could not next vm number"
+                echo "Could not get next vm number"
                 exit 1
             fi
 
