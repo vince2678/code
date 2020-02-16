@@ -384,4 +384,4 @@ EOF
 DEPLOY_SCRIPT
 }
 
-#main_fn $1 $2 $3 $4 $5 $6
+main_fn $1 $2 $3 $4 $5 $6
