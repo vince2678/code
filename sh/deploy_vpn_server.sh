@@ -157,7 +157,8 @@ function main_fn()
             rm $TEMPFILE
             ;;
         status)
-            VM_NAME=$2
+            local VM_NUMBER=$2
+            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
 
             is_running "$VM_NAME"
 
