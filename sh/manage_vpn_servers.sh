@@ -281,7 +281,7 @@ function main_fn()
 
 function help()
 {
-    echo "Usage: $0 (deploy|destroy|check-ip|get-vms|start|pause|resume|stop|status) [VM_NUMBER] [IN_MONIT]"
+    echo "Usage: $0 (deploy|delete|check-ip|get-vms|start|pause|resume|stop|status) [VM_NUMBER] [IN_MONIT]"
     exit 1
 }
 
