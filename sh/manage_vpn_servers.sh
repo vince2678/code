@@ -2,6 +2,7 @@
 
 VBOXPATH="/usr/bin/VBoxManage"
 MONIT="/usr/bin/monit"
+SSH="/usr/bin/ssh"
 
 MAIN_VM="Debian [VPN-1]"
 MAIN_VM_NUMBER=1
@@ -12,6 +13,7 @@ SEARCH_REGEXP="Debian \[VPN\-[0-9]*\]"
 
 BASE_CLONE_PREFIX="Debian [VPN-"
 BASE_CLONE_SUFFIX="]"
+HOSTNAME_PREFIX='debian-vpn-'
 BASE_IP="192.168.56."
 BASE_SOCKS_PORT=1080
 BASE_MONIT_SERVICE_PREFIX="socks-"
@@ -42,10 +44,20 @@ function main_fn()
             is_valid_number $VM_NUMBER
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
-                exit 1
+                return 1
             fi
 
             startvm "$VM_NAME"
+            if [ "$?" -ne 0 ]; then
+                 echo "Failed to start vm $VM_NAME"
+                 return 1
+            fi
+
+            waitonip "$MAIN_IP"
+            if [ "$?" -ne 0 ]; then
+                echo "Timed out waiting for vm $VM_NAME to start"
+                return 1
+            fi
 
             # start monit services
             local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
@@ -55,33 +67,42 @@ function main_fn()
                     sudo ${MONIT} start ${monit_service}
             fi
 
-            exit $?
+            return $?
             ;;
         check-ip)
             local VM_NUMBER=$2
-            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
 
             is_valid_number $VM_NUMBER
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
-                exit 1
+                return 1
             fi
 
-            is_running "$VM_NAME"
-            if [ "$?" -eq 1 ]; then
-            echo "VM is not running"
-            exit 1
+            ip=`getpublicip $VM_NUMBER`
+            status=$?
+            if [ "$status" -ne 1 ]; then
+                echo "Failed to get public ip"
+                return $status
             fi
 
-            curl --socks5 localhost:${VM_SOCKS_PORT} http://ifconfig.me/ip;
-            echo
-            exit $?
+            echo $ip
+            return 0
             ;;
         get-vms)
-            for i in `get_vm_numbers`; do
-                local vm_name="${BASE_CLONE_PREFIX}${i}${BASE_CLONE_SUFFIX}"
-                echo $vm_name
+            for vm_number in `get_vm_numbers`; do
+                local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+
+                is_running "$vm_name"
+                if [ "$?" -eq 0 ]; then
+                    ip=`getpublicip $vm_number`
+                    if [ "$?" -eq 0 ]; then
+                        echo "${vm_name} [RUNNING] ($ip)"
+                    else
+                        echo "${vm_name} [RUNNING] (unknown public ip)"
+                    fi
+                else
+                    echo "${vm_name} [NOT RUNNING]"
+                fi
             done
             ;;
         pause)
@@ -95,11 +116,11 @@ function main_fn()
             is_valid_number $VM_NUMBER
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
-                exit 1
+                return 1
             fi
 
             pausevm "$VM_NAME"
-            exit $?
+            return $?
             ;;
         resume)
             local VM_NUMBER=$2
@@ -112,11 +133,11 @@ function main_fn()
             is_valid_number $VM_NUMBER
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
-                exit 1
+                return 1
             fi
 
             resumevm "$VM_NAME"
-            exit $?
+            return $?
             ;;
         stop)
             local VM_NUMBER=$2
@@ -131,10 +152,14 @@ function main_fn()
             is_valid_number $VM_NUMBER
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
-                exit 1
+                return 1
             fi
 
-            waitpoweroff "$VM_NAME"
+            waitpoweroff "$VM_NUMBER"
+            if [ "$?" -ne 0 ]; then
+                echo "Failed to shut down vm $VM_NAME."
+                return 1
+            fi
 
             # stop monit services
             if [ -z "$IN_MONIT" ]; then
@@ -143,7 +168,7 @@ function main_fn()
                     sudo ${MONIT} stop ${monit_service}
             fi
 
-            exit $?
+            return $?
             ;;
         delete)
             local VM_NUMBER=$2
@@ -153,18 +178,23 @@ function main_fn()
                 help
             elif [ "$VM_NUMBER" -eq "$MAIN_VM_NUMBER" ]; then
                 echo "Refusing to remove main vm"
-                exit 1
+                return 1
             fi
 
             is_valid_number $VM_NUMBER
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
-                exit 1
+                return 1
             fi
 
             local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
-            waitpoweroff "$VM_NAME"
+            waitpoweroff "$VM_NUMBER"
+            if [ "$?" -ne 0 ]; then
+                echo "Failed to shut down vm."
+                return 1
+            fi
+
             deletevm "$VM_NAME"
 
             # remove monit config
@@ -175,22 +205,27 @@ function main_fn()
             sudo rm -f ${MONIT_ENABLED_DIR}/${monit_service}
             sudo ${MONIT} reload
 
-            exit $?
+            return $?
             ;;
         deploy)
             get_next_number
-            local NEXT_NUMBER=$?
+            local VM_NUMBER=$?
 
-            if [ -z "$NEXT_NUMBER" ]; then
+            if [ -z "$VM_NUMBER" ]; then
                 echo "Could not get next vm number"
-                exit 1
+                return 1
             fi
 
-            local VM_NAME="${BASE_CLONE_PREFIX}${NEXT_NUMBER}${BASE_CLONE_SUFFIX}"
-            local VM_HOST_IP="${BASE_IP}$(($NEXT_NUMBER+1))"
-            local VM_SOCKS_PORT=$(($NEXT_NUMBER - 1 + $BASE_SOCKS_PORT))
+            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local VM_HOSTNAME="${HOSTNAME_PREFIX}$(($VM_NUMBER+1))"
+            local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
+            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
-            waitpoweroff "$MAIN_VM"
+            waitpoweroff "$MAIN_VM_NUMBER"
+            if [ "$?" -ne 0 ]; then
+                echo "Failed to shut down vm $MAIN_VM."
+                return 1
+            fi
 
             # stop monit service
             sudo ${MONIT} stop ${MAIN_MONIT_SERVICE}
@@ -204,23 +239,31 @@ function main_fn()
             clonevm "$MAIN_VM" "$VM_NAME"
             if [ "$?" -ne 0 ]; then
                 echo "Failed to clone vm"
-                exit 1
+                return 1
             fi
 
             # wait for vm to be up on the main ip
             startvm "$VM_NAME"
+            if [ "$?" -ne 0 ]; then
+                 echo "Failed to start cloned vm"
+                 deletevm "$VM_NAME"
+                 main_fn start "$MAIN_VM_NUMBER"
+                 return 1
+            fi
+
             waitonip "$MAIN_IP"
-
-	    # clean up
-            if [ "$?" -eq "1" ]; then
+            if [ "$?" -ne 0 ]; then
                 echo "Timed out waiting for vm"
-                waitpoweroff "$VM_NAME"
-                deletevm "$VM_NAME"
-                # start the main
-                startvm "$MAIN_VM"
 
-                sudo ${MONIT} start ${MAIN_MONIT_SERVICE}
-                exit 1
+                waitpoweroff "$VM_NUMBER"
+                if [ "$?" -eq 0 ]; then
+                    main_fn delete "$VM_NUMBER"
+                else
+                    echo "Failed to shut down vm $VM_NAME."
+                fi
+
+                main_fn start "$MAIN_VM_NUMBER"
+                return 1
             fi
 
             # copy the deploy script
@@ -229,22 +272,35 @@ function main_fn()
             scp $TEMPFILE root@${MAIN_IP}:$TEMPFILE
 
             # execute it
-            ssh root@${MAIN_IP} "chmod +x $TEMPFILE"
-            ssh root@${MAIN_IP} "$TEMPFILE $VM_NAME $VM_HOST_IP"
+            $SSH root@${MAIN_IP} "chmod +x $TEMPFILE"
+            $SSH root@${MAIN_IP} "$TEMPFILE $VM_HOSTNAME $VM_HOST_IP"
 
             # clean up
-            ssh root@${MAIN_IP} "rm $TEMPFILE"
+            $SSH root@${MAIN_IP} "rm $TEMPFILE"
             rm $TEMPFILE
 
             # reboot the vm
-            waitpoweroff "$VM_NAME"
+            waitpoweroff "$VM_NUMBER"
+            if [ "$?" -ne 0 ]; then
+                echo "Failed to shut down vm $VM_NAME."
+                return 1
+            fi
+
             startvm "$VM_NAME"
+            if [ "$?" -ne 0 ]; then
+                 echo "Failed to start cloned vm"
+                 main_fn delete "$VM_NUMBER"
+                 return 1
+            fi
 
             #make sure it's up
             waitonip "$VM_HOST_IP"
 
             # start the main
             startvm "$MAIN_VM"
+            if [ "$?" -ne 0 ]; then
+                 echo "Failed to start main vm"
+            fi
 
             # copy monit script
             TEMPFILE=$(tempfile)
@@ -258,8 +314,6 @@ function main_fn()
 
             # start monit services
             sudo ${MONIT} reload
-            sudo ${MONIT} start ${monit_service}
-            sudo ${MONIT} start ${MAIN_MONIT_SERVICE}
 
             echo "VM $VM_NAME deployed."
 
@@ -272,17 +326,17 @@ function main_fn()
             is_valid_number $VM_NUMBER
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
-                exit 1
+                return 1
             fi
 
             is_running "$VM_NAME"
 
             if [ "$?" -eq 0 ]; then
                 echo "Running"
-                exit 0
+                return 0
             else
                 echo "Not running"
-                exit 1
+                return 1
             fi
             ;;
         *)
@@ -343,6 +397,22 @@ function startvm()
     return $?
 }
 
+# usage: getuplicip vm_number
+function getpublicip()
+{
+    local vm_number=$1
+    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+    local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+
+    is_running "$vm_name"
+    if [ "$?" -eq 1 ]; then
+       return 1;
+    fi
+    $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
+    return $?
+}
+
+#usage deletevm vm_name
 function deletevm()
 {
     echo "Deleting vm ${1}..."
@@ -381,26 +451,32 @@ function hardresetvm()
     return $?
 }
 
+# usage: poweroffvm vm_name
 function poweroffvm()
 {
-    echo "Powering off vm ${1}..."
-    $VBOXPATH controlvm "$1" poweroff
+    local VM_NAME=$1
+    echo "Powering off vm ${VM_NAME}..."
+    $VBOXPATH controlvm "$VM_NAME" poweroff
     return $?
 }
 
+# usage: acpipoweroffvm vm_number
 function acpipoweroffvm()
 {
-    $VBOXPATH controlvm "$1" acpipowerbutton
+    local VM_NUMBER=$1
+    local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
+
+    $SSH root@${VM_HOST_IP} "init 0"
     return $?
 }
 
-# vm_ip
+# usage: waitonip vm_ip
 function waitonip()
 {
     local status=1
     local start=`date +%s`
     while [ "$status" -ne 0 ]; do
-        ssh root@${1} "echo Host $1 is now up." 2>/dev/null
+        $SSH root@${1} "echo Host $1 is now up." 2>/dev/null
         status=$?
 
         sleep 5
@@ -409,43 +485,40 @@ function waitonip()
         if [ "$runtime" -gt $MAX_POWERON_WAIT ]; then
             return 1
         fi
-
     done
     return 0
 }
 
+# usage: waitpoweroffvm vm_number
 function waitpoweroff()
 {
-    is_running "$1"
-    local status=$?
-    local start=`date +%s`
+    local VM_NUMBER=$1
+    local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
 
-    echo "Attempting to shut down vm ${1}..."
-    while [ "$status" -eq 0 ]; do
-        acpipoweroffvm "$1"
-        
-        sleep 1
-        local now=`date +%s`
-        local runtime=$((now-start))
-        if [ "$runtime" -gt $MAX_POWEROFF_WAIT ]; then
-            break;
-        fi
-
-        is_running "$1"
-        status=$?
-    done
-
-    is_running "$1"
-    status=$?
-
-    if [ "$status" -eq 0 ]; then
-        poweroffvm "$1"
-        #waitpoweroff $1 # run again for good measure
-        return $?
-    else
-        echo "Successfully shut down vm ${1}."
+    is_running "$VM_NAME"
+    if [ "$?" -eq 0 ]; then
         return 0
     fi
+
+    echo "Attempting to shut down vm ${VM_NAME}..."
+    acpipoweroffvm "$VM_NUMBER"
+
+    local start=`date +%s`
+    local runtime=0
+    while [ "$runtime" -lt "$MAX_POWEROFF_WAIT" ]; do
+        is_running "$VM_NAME"
+        if [ "$?" -ne 0 ]; then
+            echo "Successfully shut down vm ${1}."
+        return 0
+        fi
+
+        sleep 2
+        now=`date +%s`
+        runtime=$((now-start))
+    done
+
+    echo "Failed acpi shutdown, attempting hard poweroff..."
+    poweroffvm "$VM_NAME"
     return $?
 }
 
@@ -519,3 +592,4 @@ DEPLOY_SCRIPT
 }
 
 main_fn $1 $2 $3 $4 $5 $6
+exit $?
