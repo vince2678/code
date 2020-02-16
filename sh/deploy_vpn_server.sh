@@ -74,8 +74,12 @@ function main_fn()
             deletevm "$VM_NAME"
 
             # remove monit config
-            sudo rm -f ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT}
-            sudo rm -f ${MONIT_ENABLED_DIR}/socks-${VM_SOCKS_PORT}
+            local servicename="socks-${VM_SOCKS_PORT}"
+
+            sudo monit stop ${servicename}
+            sudo rm -f ${MONIT_AVAILABLE_DIR}/${servicename}
+            sudo rm -f ${MONIT_ENABLED_DIR}/${servicename}
+            sudo monit reload
 
             exit $?
             ;;
@@ -134,9 +138,11 @@ function main_fn()
             output_monit_script "$VM_SOCKS_PORT" "$VM_HOST_IP" "$TEMPFILE"
 
             #we need root here
-            sudo cp $TEMPFILE ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT}
-            sudo ln -s ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT} ${MONIT_ENABLED_DIR}
+            local servicename="socks-${VM_SOCKS_PORT}"
+            sudo cp $TEMPFILE ${MONIT_AVAILABLE_DIR}/${servicename}
+            sudo ln -s ${MONIT_AVAILABLE_DIR}/${servicename} ${MONIT_ENABLED_DIR}
             sudo monit reload
+            sudo monit start ${servicename}
             rm $TEMPFILE
             ;;
         status)
