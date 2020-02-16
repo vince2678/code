@@ -61,6 +61,17 @@ function main_fn()
             pausevm "$VM_NAME"
             exit $?
             ;;
+        resume)
+            local VM_NUMBER=$2
+            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+
+            if [ -z "$VM_NUMBER" ]; then
+                help
+            fi
+
+            resumevm "$VM_NAME"
+            exit $?
+            ;;
         stop)
             local VM_NUMBER=$2
             local IN_MONIT=$3
@@ -201,7 +212,7 @@ function main_fn()
 
 function help()
 {
-    echo "Usage: $0 (deploy|destroy|start|pause|stop|status) [VM_NUMBER] [IN_MONIT]"
+    echo "Usage: $0 (deploy|destroy|start|pause|resume|stop|status) [VM_NUMBER] [IN_MONIT]"
     exit 1
 }
 
