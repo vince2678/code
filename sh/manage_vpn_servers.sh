@@ -24,7 +24,7 @@ MONIT_ENABLED_DIR="/etc/monit/conf-enabled"
 GROUP_NAME="/VPN"
 
 MAX_POWEROFF_WAIT=30
-MAX_POWERON_WAIT=30
+MAX_POWERON_WAIT=90
 
 function main_fn()
 {
@@ -391,7 +391,7 @@ function waitonip()
         ssh root@${1} "echo Host $1 is now up." 2>/dev/null
         status=$?
 
-        sleep 1
+        sleep 5
         local now=`date +%s`
         local runtime=$((now-start))
         if [ "$runtime" -gt $MAX_POWERON_WAIT ]; then
