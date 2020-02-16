@@ -37,7 +37,6 @@ function main_fn()
             fi
 
             startvm "$VM_NAME"
-            waitpoweron "$VM_NAME"
 
             # start monit services
             local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
@@ -130,7 +129,7 @@ function main_fn()
 
             # wait for vm to be up on the main ip
             startvm "$VM_NAME"
-            waitpoweron "$MAIN_IP"
+            waitonip "$MAIN_IP"
 
             # copy the deploy script
             local TEMPFILE=$(tempfile)
@@ -150,8 +149,7 @@ function main_fn()
             startvm "$VM_NAME"
 
             #make sure it's up
-            waitpoweron "$VM_HOST_IP"
-            echo "VM $VM_NAME deployed."
+            waitonip "$VM_HOST_IP"
 
             # start the main
             startvm "$MAIN_VM"
@@ -170,6 +168,8 @@ function main_fn()
             sudo monit reload
             sudo monit start ${monit_service}
             sudo monit start ${MAIN_MONIT_SERVICE}
+
+            echo "VM $VM_NAME deployed."
 
             rm $TEMPFILE
             ;;
@@ -272,15 +272,10 @@ function acpipoweroffvm()
     return $?
 }
 
-function waitpoweron()
+# vm_ip
+function waitonip()
 {
-    is_running "$1"
-    local status=$?
-    if [ "$status" -eq 1 ]; then
-        return 0
-    fi
-
-    status=1
+    local status=1
     local start=`date +%s`
     while [ "$status" -ne 0 ]; do
         ssh root@${1} "echo Host $1 is now up." 2>/dev/null
@@ -290,7 +285,7 @@ function waitpoweron()
         local now=`date +%s`
         local runtime=$((now-start))
         if [ "$runtime" -gt $MAX_POWERON_WAIT ]; then
-            break;
+            return 1
         fi
 
     done
