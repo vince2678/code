@@ -289,6 +289,10 @@ function is_running()
 
 function startvm()
 {
+    is_running "$1"
+    if [ "$?" -eq 0 ]; then
+       return 0;
+    fi
     echo "Starting vm ${1}..."
     $VBOXPATH startvm "$1" --type headless
     return $?
