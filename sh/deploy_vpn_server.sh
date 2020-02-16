@@ -32,7 +32,7 @@ function main_fn()
                 help
             fi
 
-            startvm $VM_NAME
+            startvm "$VM_NAME"
             exit $?
             ;;
         pause)
@@ -43,7 +43,7 @@ function main_fn()
                 help
             fi
 
-            pausevm $VM_NAME
+            pausevm "$VM_NAME"
             exit $?
             ;;
         stop)
@@ -54,7 +54,7 @@ function main_fn()
                 help
             fi
 
-            waitpoweroff $VM_NAME
+            waitpoweroff "$VM_NAME"
             exit $?
             ;;
         delete)
@@ -63,19 +63,19 @@ function main_fn()
 
             if [ -z "$VM_NUMBER" ]; then
                 help
-	    elif [ "$VM_NUMBER" -eq "$MAIN_VM_NUMBER" ]; then
-		    echo "Refusing to remove main vm"
-		    exit 1
-	    fi
+            elif [ "$VM_NUMBER" -eq "$MAIN_VM_NUMBER" ]; then
+                echo "Refusing to remove main vm"
+                exit 1
+            fi
 
-	    local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
+            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
-            waitpoweroff $VM_NAME
-            deletevm $VM_NAME
+            waitpoweroff "$VM_NAME"
+            deletevm "$VM_NAME"
 
-	    # remove monit config
-	    sudo rm -f ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT}
-	    sudo rm -f ${MONIT_ENABLED_DIR}/socks-${VM_SOCKS_PORT}
+            # remove monit config
+            sudo rm -f ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT}
+            sudo rm -f ${MONIT_ENABLED_DIR}/socks-${VM_SOCKS_PORT}
 
             exit $?
             ;;
@@ -90,24 +90,24 @@ function main_fn()
 
             local VM_NAME="${BASE_CLONE_PREFIX}${NEXT_NUMBER}${BASE_CLONE_SUFFIX}"
             local VM_HOST_IP="${BASE_IP}$(($NEXT_NUMBER+1))"
-	    local VM_SOCKS_PORT=$(($NEXT_NUMBER - 1 + $BASE_SOCKS_PORT))
+            local VM_SOCKS_PORT=$(($NEXT_NUMBER - 1 + $BASE_SOCKS_PORT))
 
-            waitpoweroff $MAIN_VM
-	    
-	    # clone the main vm
-            clonevm $MAIN_VM $VM_NAME
+            waitpoweroff "$MAIN_VM"
+
+            # clone the main vm
+            clonevm "$MAIN_VM" "$VM_NAME"
             if [ "$?" -ne 0 ]; then
                 echo "Failed to clone vm"
                 exit 1
             fi
 
             # wait for vm to be up on the main ip
-            startvm $VM_NAME
-            waitpoweron $MAIN_IP
+            startvm "$VM_NAME"
+            waitpoweron "$MAIN_IP"
 
             # copy the deploy script
             local TEMPFILE=$(tempfile)
-            output_deploy_script $TEMPFILE
+            output_deploy_script "$TEMPFILE"
             scp $TEMPFILE root@${MAIN_IP}:$TEMPFILE
 
             # execute it
@@ -119,30 +119,30 @@ function main_fn()
             rm $TEMPFILE
 
             # reboot the vm
-            waitpoweroff $VM_NAME
-            startvm $VM_NAME
+            waitpoweroff "$VM_NAME"
+            startvm "$VM_NAME"
 
             #make sure it's up
-            waitpoweron $VM_HOST_IP
+            waitpoweron "$VM_HOST_IP"
             echo "VM $VM_NAME deployed."
 
-	    # start the main
-            startvm $MAIN_VM
+            # start the main
+            startvm "$MAIN_VM"
 
-	    # copy monit script
-	    TEMPFILE=$(tempfile)
-	    output_monit_script $VM_SOCKS_PORT $VM_HOST_IP $TEMPFILE
+            # copy monit script
+            TEMPFILE=$(tempfile)
+            output_monit_script "$VM_SOCKS_PORT" "$VM_HOST_IP" "$TEMPFILE"
 
-	    #we need root here
-	    sudo cp $TEMPFILE ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT}
-	    sudo ln -s ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT} ${MONIT_ENABLED_DIR}
-	    sudo monit reload
-	    rm $TEMPFILE
+            #we need root here
+            sudo cp $TEMPFILE ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT}
+            sudo ln -s ${MONIT_AVAILABLE_DIR}/socks-${VM_SOCKS_PORT} ${MONIT_ENABLED_DIR}
+            sudo monit reload
+            rm $TEMPFILE
             ;;
         status)
             VM_NAME=$2
 
-            isrunning $VM_NAME
+            is_running "$VM_NAME"
 
             if [ "$?" -eq 0 ]; then
                 echo "Running"
@@ -169,68 +169,70 @@ function get_next_number {
     return $(($LAST+1))
 }
 
-function isrunning()
+# returns 0 if vm running, 1 otherwise
+function is_running()
 {
         output=`$VBOXPATH list runningvms | grep -oF "$1"`
-        if [ -z "$output" ]; then
-            return 1
-        else
+        if [ "$output" == "$1" ]; then
             return 0
+        else
+            return 1
         fi
 }
 
 function startvm()
 {
     echo "Starting vm ${1}..."
-    $VBOXPATH startvm $1 --type headless
+    $VBOXPATH startvm "$1" --type headless
     return $?
 }
 
 function deletevm()
 {
     echo "Deleting vm ${1}..."
-    $VBOXPATH unregistervm $1 --delete
+    $VBOXPATH unregistervm "$1" --delete
     return $?
 }
 
+# usage: clonevm to_clone clone_name
 function clonevm()
 {
     echo "Cloning vm ${1}..."
-    $VBOXPATH clonevm $1 --groups $GROUP_NAME \
-    --mode machine --name $2 --options link --register
+    $VBOXPATH clonevm "$1" --groups $GROUP_NAME \
+       --mode machine --name "$2" --options link --register
     return $?
 }
 
 function pausevm()
 {
     echo "Pausing vm ${1}..."
-    $VBOXPATH controlvm $1 pause
+    $VBOXPATH controlvm "$1" pause
     return $?
 }
 
 function hardresetvm()
 {
     echo "Resetting vm ${1}..."
-    $VBOXPATH controlvm $1 reset
+    $VBOXPATH controlvm "$1" reset
     return $?
 }
 
 function poweroffvm()
 {
     echo "Powering off vm ${1}..."
-    $VBOXPATH controlvm $1 poweroff
+    $VBOXPATH controlvm "$1" poweroff
     return $?
 }
 
 function acpipoweroffvm()
 {
-    $VBOXPATH controlvm $1 acpipowerbutton
+    $VBOXPATH controlvm "$1" acpipowerbutton
     return $?
 }
 
 function waitpoweron()
 {
-    is_running $1
+    is_running "$1"
     local status=$?
     if [ "$status" -eq 1 ]; then
         return 0
@@ -255,13 +257,13 @@ function waitpoweron()
 
 function waitpoweroff()
 {
-    is_running $1
+    is_running "$1"
     local status=$?
     local start=`date +%s`
 
     echo "Attempting to shut down vm ${1}..."
     while [ "$status" -eq 0 ]; do
-        acpipoweroffvm $1
+        acpipoweroffvm "$1"
         
         sleep 1
         local now=`date +%s`
@@ -270,15 +272,15 @@ function waitpoweroff()
             break;
         fi
 
-        is_running $1
+        is_running "$1"
         status=$?
     done
 
-    is_running $1
+    is_running "$1"
     status=$?
 
     if [ "$status" -eq 0 ]; then
-        poweroffvm $1
+        poweroffvm "$1"
         #waitpoweroff $1 # run again for good measure
         return $?
     else
@@ -356,3 +358,5 @@ iface enp0s8 inet static
 EOF
 DEPLOY_SCRIPT
 }
+
+#main_fn $1 $2 $3 $4 $5 $6
