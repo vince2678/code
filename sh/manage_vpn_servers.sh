@@ -211,6 +211,18 @@ function main_fn()
             startvm "$VM_NAME"
             waitonip "$MAIN_IP"
 
+	    # clean up
+            if [ "$?" -eq "1" ]; then
+                echo "Timed out waiting for vm"
+                waitpoweroff "$VM_NAME"
+                deletevm "$VM_NAME"
+                # start the main
+                startvm "$MAIN_VM"
+
+                sudo ${MONIT} start ${MAIN_MONIT_SERVICE}
+                exit 1
+            fi
+
             # copy the deploy script
             local TEMPFILE=$(tempfile)
             output_deploy_script "$TEMPFILE"
