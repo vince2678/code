@@ -78,7 +78,7 @@ function main_fn()
             echo
             exit $?
             ;;
-            get-vms)
+        get-vms)
             for i in `get_vm_numbers`; do
                 local vm_name="${BASE_CLONE_PREFIX}${i}${BASE_CLONE_SUFFIX}"
                 echo $vm_name
