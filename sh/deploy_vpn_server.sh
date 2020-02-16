@@ -1,6 +1,7 @@
 #!/bin/bash
 
 VBOXPATH="/usr/bin/VBoxManage"
+MONIT="/usr/bin/monit"
 
 MAIN_VM="a17ca276-c09c-471e-ba3b-6fa4ccfb422e"
 MAIN_VM_NUMBER=1
@@ -29,6 +30,7 @@ function main_fn()
     case $1 in
         start)
             local VM_NUMBER=$2
+            local IN_MONIT=$3
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
             local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
@@ -41,8 +43,10 @@ function main_fn()
             # start monit services
             local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
 
-            echo "Starting monit service ${monit_service}..."
-            sudo monit start ${monit_service}
+            if [ -z "$IN_MONIT" ]; then
+                    echo "Starting monit service ${monit_service}..."
+                    sudo ${MONIT} start ${monit_service}
+            fi
 
             exit $?
             ;;
@@ -59,6 +63,7 @@ function main_fn()
             ;;
         stop)
             local VM_NUMBER=$2
+            local IN_MONIT=$3
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
             local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
@@ -69,10 +74,11 @@ function main_fn()
             waitpoweroff "$VM_NAME"
 
             # stop monit services
-            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
-
-            echo "Stopping monit service ${monit_service}..."
-            sudo monit stop ${monit_service}
+            if [ -z "$IN_MONIT" ]; then
+                    local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
+                    echo "Stopping monit service ${monit_service}..."
+                    sudo ${MONIT} stop ${monit_service}
+            fi
 
             exit $?
             ;;
@@ -95,10 +101,10 @@ function main_fn()
             # remove monit config
             local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
 
-            sudo monit stop ${monit_service}
+            sudo ${MONIT} stop ${monit_service}
             sudo rm -f ${MONIT_AVAILABLE_DIR}/${monit_service}
             sudo rm -f ${MONIT_ENABLED_DIR}/${monit_service}
-            sudo monit reload
+            sudo ${MONIT} reload
 
             exit $?
             ;;
@@ -118,7 +124,7 @@ function main_fn()
             waitpoweroff "$MAIN_VM"
 
             # stop monit service
-            sudo monit stop ${MAIN_MONIT_SERVICE}
+            sudo ${MONIT} stop ${MAIN_MONIT_SERVICE}
 
             # clone the main vm
             clonevm "$MAIN_VM" "$VM_NAME"
@@ -165,9 +171,9 @@ function main_fn()
             sudo ln -s ${MONIT_AVAILABLE_DIR}/${monit_service} ${MONIT_ENABLED_DIR}
 
             # start monit services
-            sudo monit reload
-            sudo monit start ${monit_service}
-            sudo monit start ${MAIN_MONIT_SERVICE}
+            sudo ${MONIT} reload
+            sudo ${MONIT} start ${monit_service}
+            sudo ${MONIT} start ${MAIN_MONIT_SERVICE}
 
             echo "VM $VM_NAME deployed."
 
@@ -195,7 +201,7 @@ function main_fn()
 
 function help()
 {
-    echo "Usage: $0 (deploy)(destroy|start|pause|stop|status) VM_NUMBER"
+    echo "Usage: $0 (deploy|destroy|start|pause|stop|status) [VM_NUMBER] [IN_MONIT]"
     exit 1
 }
 
