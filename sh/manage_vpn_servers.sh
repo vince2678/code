@@ -6,6 +6,7 @@ MONIT="/usr/bin/monit"
 MAIN_VM="a17ca276-c09c-471e-ba3b-6fa4ccfb422e"
 MAIN_VM_NUMBER=1
 MAIN_IP="192.168.56.2"
+MAIN_SNAPSHOT="VPN_Snapshot"
 
 SEARCH_REGEXP="Debian \[VPN\-[0-9]*\]"
 
@@ -194,6 +195,11 @@ function main_fn()
             # stop monit service
             sudo ${MONIT} stop ${MAIN_MONIT_SERVICE}
 
+            local snapshot=`$VBOXPATH snapshot "$MAIN_VM" list | grep -oF "$MAIN_SNAPSHOT"`
+            if [ -z "$snapshot" ]; then
+                $VBOXPATH snapshot "$MAIN_VM" take "$MAIN_SNAPSHOT"
+            fi
+
             # clone the main vm
             clonevm "$MAIN_VM" "$VM_NAME"
             if [ "$?" -ne 0 ]; then
@@ -337,7 +343,8 @@ function clonevm()
 {
     echo "Cloning vm ${1}..."
     $VBOXPATH clonevm "$1" --groups $GROUP_NAME \
-       --mode machine --name "$2" --options link --register
+       --mode machine --name "$2" --options link \
+       --register --snapshot $MAIN_SNAPSHOT
     return $?
 }
 
