@@ -6,12 +6,15 @@ MAIN_VM="a17ca276-c09c-471e-ba3b-6fa4ccfb422e"
 MAIN_VM_NUMBER=1
 MAIN_IP="192.168.56.2"
 
+SEARCH_REGEXP="Debian \[VPN\-[0-9]*\]"
+
 BASE_CLONE_PREFIX="Debian [VPN-"
 BASE_CLONE_SUFFIX="]"
 BASE_IP="192.168.56."
 BASE_SOCKS_PORT=1080
+BASE_MONIT_SERVICE_PREFIX="socks-"
 
-SEARCH_REGEXP="Debian \[VPN\-[0-9]*\]"
+MAIN_MONIT_SERVICE="${BASE_MONIT_SERVICE_PREFIX}${BASE_SOCKS_PORT}"
 
 MONIT_AVAILABLE_DIR="/etc/monit/conf-available"
 MONIT_ENABLED_DIR="/etc/monit/conf-enabled"
@@ -74,11 +77,11 @@ function main_fn()
             deletevm "$VM_NAME"
 
             # remove monit config
-            local servicename="socks-${VM_SOCKS_PORT}"
+            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
 
-            sudo monit stop ${servicename}
-            sudo rm -f ${MONIT_AVAILABLE_DIR}/${servicename}
-            sudo rm -f ${MONIT_ENABLED_DIR}/${servicename}
+            sudo monit stop ${monit_service}
+            sudo rm -f ${MONIT_AVAILABLE_DIR}/${monit_service}
+            sudo rm -f ${MONIT_ENABLED_DIR}/${monit_service}
             sudo monit reload
 
             exit $?
@@ -97,6 +100,9 @@ function main_fn()
             local VM_SOCKS_PORT=$(($NEXT_NUMBER - 1 + $BASE_SOCKS_PORT))
 
             waitpoweroff "$MAIN_VM"
+
+            # stop monit service
+            sudo monit stop ${MAIN_MONIT_SERVICE}
 
             # clone the main vm
             clonevm "$MAIN_VM" "$VM_NAME"
@@ -138,11 +144,16 @@ function main_fn()
             output_monit_script "$VM_SOCKS_PORT" "$VM_HOST_IP" "$TEMPFILE"
 
             #we need root here
-            local servicename="socks-${VM_SOCKS_PORT}"
-            sudo cp $TEMPFILE ${MONIT_AVAILABLE_DIR}/${servicename}
-            sudo ln -s ${MONIT_AVAILABLE_DIR}/${servicename} ${MONIT_ENABLED_DIR}
+            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
+
+            sudo cp $TEMPFILE ${MONIT_AVAILABLE_DIR}/${monit_service}
+            sudo ln -s ${MONIT_AVAILABLE_DIR}/${monit_service} ${MONIT_ENABLED_DIR}
+
+            # start monit services
             sudo monit reload
-            sudo monit start ${servicename}
+            sudo monit start ${monit_service}
+            sudo monit start ${MAIN_MONIT_SERVICE}
+
             rm $TEMPFILE
             ;;
         status)
