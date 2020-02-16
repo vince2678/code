@@ -279,12 +279,12 @@ function get_vm_numbers {
 # returns 0 if vm running, 1 otherwise
 function is_running()
 {
-        output=`$VBOXPATH list runningvms | grep -oF "$1"`
-        if [ "$output" == "$1" ]; then
-            return 0
-        else
-            return 1
-        fi
+    output=`$VBOXPATH list runningvms | grep -oF "$1"`
+    if [ "$output" == "$1" ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 function startvm()
