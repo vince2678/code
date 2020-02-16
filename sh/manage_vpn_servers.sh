@@ -38,6 +38,12 @@ function main_fn()
                 help
             fi
 
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                exit 1
+            fi
+
             startvm "$VM_NAME"
 
             # start monit services
@@ -58,6 +64,12 @@ function main_fn()
                 help
             fi
 
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                exit 1
+            fi
+
             pausevm "$VM_NAME"
             exit $?
             ;;
@@ -67,6 +79,12 @@ function main_fn()
 
             if [ -z "$VM_NUMBER" ]; then
                 help
+            fi
+
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                exit 1
             fi
 
             resumevm "$VM_NAME"
@@ -80,6 +98,12 @@ function main_fn()
 
             if [ -z "$VM_NUMBER" ]; then
                 help
+            fi
+
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                exit 1
             fi
 
             waitpoweroff "$VM_NAME"
@@ -101,6 +125,12 @@ function main_fn()
                 help
             elif [ "$VM_NUMBER" -eq "$MAIN_VM_NUMBER" ]; then
                 echo "Refusing to remove main vm"
+                exit 1
+            fi
+
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
                 exit 1
             fi
 
@@ -194,6 +224,12 @@ function main_fn()
             local VM_NUMBER=$2
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
 
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                exit 1
+            fi
+
             is_running "$VM_NAME"
 
             if [ "$?" -eq 0 ]; then
@@ -219,6 +255,25 @@ function help()
 function get_next_number {
     LAST=`VBoxManage list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort | tail -n 1`
     return $(($LAST+1))
+}
+
+# Usage: is_valid_number vm_number
+function is_valid_number {
+    if [ -z "$1" ]; then
+        return 1
+    fi
+
+    for i in `get_vm_numbers`; do
+        if [ "$i" -eq "$1" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+function get_vm_numbers {
+    local vm_numbers=`VBoxManage list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort`
+    echo $vm_numbers
 }
 
 # returns 0 if vm running, 1 otherwise
