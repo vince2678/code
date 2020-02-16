@@ -30,12 +30,21 @@ function main_fn()
         start)
             local VM_NUMBER=$2
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
             if [ -z "$VM_NUMBER" ]; then
                 help
             fi
 
             startvm "$VM_NAME"
+            waitpoweron "$VM_NAME"
+
+            # start monit services
+            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
+
+            echo "Starting monit service ${monit_service}..."
+            sudo monit start ${monit_service}
+
             exit $?
             ;;
         pause)
@@ -52,12 +61,20 @@ function main_fn()
         stop)
             local VM_NUMBER=$2
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
             if [ -z "$VM_NUMBER" ]; then
                 help
             fi
 
             waitpoweroff "$VM_NAME"
+
+            # stop monit services
+            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
+
+            echo "Stopping monit service ${monit_service}..."
+            sudo monit stop ${monit_service}
+
             exit $?
             ;;
         delete)
