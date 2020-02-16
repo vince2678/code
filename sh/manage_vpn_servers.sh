@@ -3,7 +3,7 @@
 VBOXPATH="/usr/bin/VBoxManage"
 MONIT="/usr/bin/monit"
 
-MAIN_VM="a17ca276-c09c-471e-ba3b-6fa4ccfb422e"
+MAIN_VM="Debian [VPN-1]"
 MAIN_VM_NUMBER=1
 MAIN_IP="192.168.56.2"
 MAIN_SNAPSHOT="VPN_Snapshot"
