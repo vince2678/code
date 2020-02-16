@@ -56,6 +56,33 @@ function main_fn()
 
             exit $?
             ;;
+        check-ip)
+            local VM_NUMBER=$2
+            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
+            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                exit 1
+            fi
+
+            is_running "$VM_NAME"
+            if [ "$?" -eq 1 ]; then
+            echo "VM is not running"
+            exit 1
+            fi
+
+            curl --socks5 localhost:${VM_SOCKS_PORT} http://ifconfig.me/ip;
+            echo
+            exit $?
+            ;;
+            get-vms)
+            for i in `get_vm_numbers`; do
+                local vm_name="${BASE_CLONE_PREFIX}${i}${BASE_CLONE_SUFFIX}"
+                echo $vm_name
+            done
+            ;;
         pause)
             local VM_NUMBER=$2
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
@@ -248,7 +275,7 @@ function main_fn()
 
 function help()
 {
-    echo "Usage: $0 (deploy|destroy|start|pause|resume|stop|status) [VM_NUMBER] [IN_MONIT]"
+    echo "Usage: $0 (deploy|destroy|check-ip|get-vms|start|pause|resume|stop|status) [VM_NUMBER] [IN_MONIT]"
     exit 1
 }
 
