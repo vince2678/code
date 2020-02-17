@@ -398,10 +398,8 @@ function main_fn()
                 return 1
             fi
 
-            is_running "$vm_name"
-            status=$?
-
-            if [ "$status" -eq 0 ]; then
+            local running=`is_running "$vm_name"`
+            if [ "$running" == "true" ]; then
                 issocksactive $vm_number
                 if [ "$?" -eq 0 ]; then
                     ip=`getpublicip $vm_number`
@@ -469,16 +467,18 @@ function is_running()
 {
     output=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list runningvms | grep -oF "$1"`
     if [ "$output" == "$1" ]; then
+        echo "true"
         return 0
     else
+        echo "false"
         return 1
     fi
 }
 
 function startvm()
 {
-    is_running "$1"
-    if [ "$?" -eq 0 ]; then
+    local running=`is_running "$1"`
+    if [ "$running" == "true" ]; then
        return 0;
     fi
     echo "Starting vm ${1}..."
@@ -493,8 +493,8 @@ function getpublicip()
     local vm_host_ip="${BASE_IP}$(($vm_number+1))"
     local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-    is_running "$vm_name"
-    if [ "$?" -eq 1 ]; then
+    local running=`is_running "$vm_name"`
+    if [ "$running" == "false" ]; then
        return 1;
     fi
     $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
@@ -674,9 +674,9 @@ function waitpoweroff()
     local vm_number=$1
     local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-    is_running "$vm_name"
-    if [ "$?" -eq 0 ]; then
-        return 0
+    local running=`is_running "$vm_name"`
+    if [ "$running" == "false" ]; then
+       return 0;
     fi
 
     echo "Attempting to shut down vm ${vm_name}..."
@@ -685,10 +685,10 @@ function waitpoweroff()
     local start=`date +%s`
     local runtime=0
     while [ "$runtime" -lt "$MAX_POWEROFF_WAIT" ]; do
-        is_running "$vm_name"
-        if [ "$?" -ne 0 ]; then
+        running=`is_running "$vm_name"`
+        if [ "$running" == "false" ]; then
             echo "Successfully shut down vm ${1}."
-        return 0
+            return 0;
         fi
 
         sleep 2
