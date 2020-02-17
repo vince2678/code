@@ -184,7 +184,8 @@ function main_fn()
             status=$?
             if [ "$status" -ne 0 ]; then
                 startsocksproxy "$vm_number"
-                if [ "$?" -eq 0 ]; then
+                status=$?
+                if [ "$status" -eq 0 ]; then
                     echo "Started socks proxy."
                 else
                     echo "Failed to start socks proxy."
@@ -210,7 +211,8 @@ function main_fn()
             status=$?
             if [ "$status" -eq 0 ]; then
                 stopsocksproxy "$vm_number"
-                if [ "$?" -eq 0 ]; then
+                status=$?
+                if [ "$status" -eq 0 ]; then
                     echo "Stopped socks proxy."
                 else
                     echo "Failed to stop socks proxy."
