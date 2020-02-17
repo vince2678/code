@@ -40,44 +40,44 @@ function main_fn()
 
     case $1 in
         start)
-            local VM_NUMBER=$2
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-            if [ -z "$VM_NUMBER" ]; then
+            if [ -z "$vm_number" ]; then
                 help
             fi
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            startvm "$VM_NAME"
+            startvm "$vm_name"
             if [ "$?" -ne 0 ]; then
-                 echo "Failed to start vm $VM_NAME"
+                 echo "Failed to start vm $vm_name"
                  return 1
             fi
 
             waitonip "$MAIN_IP"
             if [ "$?" -ne 0 ]; then
-                echo "Timed out waiting for vm $VM_NAME to start"
+                echo "Timed out waiting for vm $vm_name to start"
                 return 1
             fi
 
-            main_fn start-proxy "$VM_NUMBER"
+            main_fn start-proxy "$vm_number"
             return $?
             ;;
         check-ip)
-            local VM_NUMBER=$2
+            local vm_number=$2
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            ip=`getpublicip $VM_NUMBER`
+            ip=`getpublicip $vm_number`
             status=$?
             if [ "$status" -eq 1 ]; then
                 echo "Failed to get public ip"
@@ -88,151 +88,151 @@ function main_fn()
             return 0
             ;;
         pause)
-            local VM_NUMBER=$2
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-            if [ -z "$VM_NUMBER" ]; then
+            if [ -z "$vm_number" ]; then
                 help
             fi
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            pausevm "$VM_NAME"
+            pausevm "$vm_name"
             status=$?
             if [ "$status" -ne 0 ]; then
-                echo "Failed to pause $VM_NAME"
+                echo "Failed to pause $vm_name"
                 return $status
             fi
 
-            main_fn stop-proxy "$VM_NUMBER"
+            main_fn stop-proxy "$vm_number"
             return $?
             ;;
         resume)
-            local VM_NUMBER=$2
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-            if [ -z "$VM_NUMBER" ]; then
+            if [ -z "$vm_number" ]; then
                 help
             fi
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            resumevm "$VM_NAME"
+            resumevm "$vm_name"
             status=$?
             if [ "$status" -ne 0 ]; then
-                echo "Failed to resume $VM_NAME"
+                echo "Failed to resume $vm_name"
                 return $status
             fi
 
-            main_fn start-proxy "$VM_NUMBER"
+            main_fn start-proxy "$vm_number"
             return $?
             ;;
         stop)
-            local VM_NUMBER=$2
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-            if [ -z "$VM_NUMBER" ]; then
+            if [ -z "$vm_number" ]; then
                 help
             fi
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            waitpoweroff "$VM_NUMBER"
+            waitpoweroff "$vm_number"
             if [ "$?" -ne 0 ]; then
-                echo "Failed to shut down vm $VM_NAME."
+                echo "Failed to shut down vm $vm_name."
                 return 1
             fi
 
-            main_fn stop-proxy "$VM_NUMBER"
+            main_fn stop-proxy "$vm_number"
             return $?
             ;;
         start-proxy)
-            local VM_NUMBER=$2
+            local vm_number=$2
 
-            if [ -z "$VM_NUMBER" ]; then
+            if [ -z "$vm_number" ]; then
                 help
             fi
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            issocksactive "$VM_NUMBER"
+            issocksactive "$vm_number"
             status=$?
             if [ "$status" -ne 0 ]; then
-                startsocksproxy "$VM_NUMBER"
+                startsocksproxy "$vm_number"
                 return $status
             fi
             return 0
             ;;
         stop-proxy)
-            local VM_NUMBER=$2
+            local vm_number=$2
 
-            if [ -z "$VM_NUMBER" ]; then
+            if [ -z "$vm_number" ]; then
                 help
             fi
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            issocksactive "$VM_NUMBER"
+            issocksactive "$vm_number"
             status=$?
             if [ "$status" -eq 0 ]; then
-                stopsocksproxy "$VM_NUMBER"
+                stopsocksproxy "$vm_number"
                 return $status
             fi
             return 0
             ;;
         delete)
-            local VM_NUMBER=$2
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-            if [ -z "$VM_NUMBER" ]; then
+            if [ -z "$vm_number" ]; then
                 help
-            elif [ "$VM_NUMBER" -eq "$MAIN_VM_NUMBER" ]; then
+            elif [ "$vm_number" -eq "$MAIN_VM_NUMBER" ]; then
                 echo "Refusing to remove main vm"
                 return 1
             fi
 
-            main_fn stop "$VM_NUMBER"
+            main_fn stop "$vm_number"
             if [ "$?" -ne 0 ]; then
                 return 1
             fi
 
-            deletevm "$VM_NAME"
+            deletevm "$vm_name"
             status=$?
             if [ "$status" -ne 0 ]; then
-                echo "Failed to delete vm ${VM_NAME}."
+                echo "Failed to delete vm ${vm_name}."
                 return $status
             fi
             ;;
         deploy)
-            local VM_NUMBER=`get_next_number`
-            if [ -z "$VM_NUMBER" ]; then
+            local vm_number=`get_next_number`
+            if [ -z "$vm_number" ]; then
                 echo "Could not get next vm number"
                 return 1
             fi
 
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
-            local VM_HOSTNAME="${HOSTNAME_PREFIX}$(($VM_NUMBER+1))"
-            local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number+1))"
+            local vm_host_ip="${BASE_IP}$(($vm_number+1))"
 
             main_fn stop "$MAIN_VM_NUMBER"
             if [ "$?" -ne 0 ]; then
@@ -245,17 +245,17 @@ function main_fn()
             fi
 
             # clone the main vm
-            clonevm "$MAIN_VM" "$VM_NAME"
+            clonevm "$MAIN_VM" "$vm_name"
             if [ "$?" -ne 0 ]; then
                 echo "Failed to clone vm"
                 return 1
             fi
 
             # wait for vm to be up on the main ip
-            startvm "$VM_NAME"
+            startvm "$vm_name"
             if [ "$?" -ne 0 ]; then
                  echo "Failed to start cloned vm"
-                 main_fn delete "$VM_NUMBER"
+                 main_fn delete "$vm_number"
                  main_fn start "$MAIN_VM_NUMBER"
                  return 1
             fi
@@ -264,11 +264,11 @@ function main_fn()
             if [ "$?" -ne 0 ]; then
                 echo "Timed out waiting for vm"
 
-                waitpoweroff "$VM_NUMBER"
+                waitpoweroff "$vm_number"
                 if [ "$?" -eq 0 ]; then
-                    main_fn delete "$VM_NUMBER"
+                    main_fn delete "$vm_number"
                 else
-                    echo "Failed to shut down vm $VM_NAME."
+                    echo "Failed to shut down vm $vm_name."
                 fi
 
                 main_fn start "$MAIN_VM_NUMBER"
@@ -276,29 +276,29 @@ function main_fn()
             fi
 
             # copy the deploy script
-            local TEMPFILE=$(tempfile)
-            output_deploy_script "$TEMPFILE"
-            scp $TEMPFILE root@${MAIN_IP}:$TEMPFILE
+            local tempfile=$(tempfile)
+            output_deploy_script "$tempfile"
+            scp $tempfile root@${MAIN_IP}:$tempfile
 
             # execute it
-            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "chmod +x $TEMPFILE"
-            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "$TEMPFILE $VM_HOSTNAME $VM_HOST_IP"
+            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "chmod +x $tempfile"
+            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "$tempfile $vm_hostname $vm_host_ip"
 
             # clean up
-            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $TEMPFILE"
-            rm $TEMPFILE
+            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $tempfile"
+            rm $tempfile
 
             # reboot the vm
-            waitpoweroff "$VM_NUMBER"
+            waitpoweroff "$vm_number"
             if [ "$?" -ne 0 ]; then
-                echo "Failed to shut down vm ${VM_NAME}."
+                echo "Failed to shut down vm ${vm_name}."
                 return 1
             fi
 
-            main_fn start "$VM_NUMBER"
+            main_fn start "$vm_number"
             if [ "$?" -ne 0 ]; then
                  echo "Failed to start cloned vm"
-                 main_fn delete "$VM_NUMBER"
+                 main_fn delete "$vm_number"
                  return 1
             fi
 
@@ -308,37 +308,37 @@ function main_fn()
                  echo "Failed to start main vm"
             fi
 
-            echo "VM ${VM_NAME} deployed."
+            echo "VM ${vm_name} deployed."
             return 0
             ;;
         status)
-            local VM_NUMBER=$2
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
-            local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
-            local socks_port=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+            local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+            local socks_port=$(($vm_number - 1 + $BASE_SOCKS_PORT))
 
-            is_valid_number $VM_NUMBER
+            is_valid_number $vm_number
             if [ "$?" -ne 0 ]; then
                 echo "No such vm number"
                 return 1
             fi
 
-            is_running "$VM_NAME"
+            is_running "$vm_name"
             status=$?
 
             if [ "$status" -eq 0 ]; then
-                issocksactive $VM_NUMBER
+                issocksactive $vm_number
                 if [ "$?" -eq 0 ]; then
-                    ip=`getpublicip $VM_NUMBER`
+                    ip=`getpublicip $vm_number`
 
-                    echo "\"${VM_NAME}\": [RUNNING] *:${socks_port}:${VM_HOST_IP} -> $ip"
+                    echo "\"${vm_name}\": [RUNNING] *:${socks_port}:${vm_host_ip} -> $ip"
                     return 0
                 else
-                    echo "\"${VM_NAME}\": [RUNNING] (tunnel inactive)"
+                    echo "\"${vm_name}\": [RUNNING] (tunnel inactive)"
                     return 1
                 fi
             else
-                echo "\"${VM_NAME}\": [NOT RUNNING]"
+                echo "\"${vm_name}\": [NOT RUNNING]"
                 return 1
             fi
             ;;
@@ -358,7 +358,7 @@ function main_fn()
 
 function help()
 {
-    echo "Usage: $0 (deploy|delete|check-ip|start-proxy|stop-proxy|start|pause|resume|stop|status|status-all) [VM_NUMBER]"
+    echo "Usage: $0 (deploy|delete|check-ip|start-proxy|stop-proxy|start|pause|resume|stop|status|status-all) [vm_number]"
     exit 1
 }
 
@@ -529,19 +529,19 @@ function hardresetvm()
 # usage: poweroffvm vm_name
 function poweroffvm()
 {
-    local VM_NAME=$1
-    echo "Powering off vm ${VM_NAME}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$VM_NAME" poweroff
+    local vm_name=$1
+    echo "Powering off vm ${vm_name}..."
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$vm_name" poweroff
     return $?
 }
 
 # usage: acpipoweroffvm vm_number
 function acpipoweroffvm()
 {
-    local VM_NUMBER=$1
-    local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
+    local vm_number=$1
+    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
 
-    $RUNUSER -u $SCRIPT_USER -- $SSH root@${VM_HOST_IP} "init 0"
+    $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} "init 0"
     return $?
 }
 
@@ -567,21 +567,21 @@ function waitonip()
 # usage: waitpoweroffvm vm_number
 function waitpoweroff()
 {
-    local VM_NUMBER=$1
-    local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+    local vm_number=$1
+    local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-    is_running "$VM_NAME"
+    is_running "$vm_name"
     if [ "$?" -eq 0 ]; then
         return 0
     fi
 
-    echo "Attempting to shut down vm ${VM_NAME}..."
-    acpipoweroffvm "$VM_NUMBER"
+    echo "Attempting to shut down vm ${vm_name}..."
+    acpipoweroffvm "$vm_number"
 
     local start=`date +%s`
     local runtime=0
     while [ "$runtime" -lt "$MAX_POWEROFF_WAIT" ]; do
-        is_running "$VM_NAME"
+        is_running "$vm_name"
         if [ "$?" -ne 0 ]; then
             echo "Successfully shut down vm ${1}."
         return 0
@@ -593,7 +593,7 @@ function waitpoweroff()
     done
 
     echo "Failed acpi shutdown, attempting hard poweroff..."
-    poweroffvm "$VM_NAME"
+    poweroffvm "$vm_name"
     return $?
 }
 
