@@ -291,7 +291,7 @@ function main_fn()
                 $MONIT reload
                 return $?
             fi
-	    return 0
+            return 0
             ;;
         "deploy")
             local vm_number=`get_next_number`
@@ -350,30 +350,38 @@ function main_fn()
             output_deploy_script "$tempfile"
             $RUNUSER -u $SCRIPT_USER -- $SCP $tempfile root@${MAIN_IP}:$tempfile
 
-            # execute it
-            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "chmod +x $tempfile"
-            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "$tempfile $vm_hostname $vm_host_ip"
+            status=$?
+            if [ "$status" -eq 0 ]; then
+                # execute it
+                $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "chmod +x $tempfile"
+                $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "$tempfile $vm_hostname $vm_host_ip"
 
-            # clean up
-            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $tempfile"
+                # clean up
+                $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $tempfile"
+
+                # reboot the vm
+                waitpoweroff "$vm_number"
+                status=$?
+            else
+                echo "Failed to copy setup script to $vm_name"
+                main_fn delete "$vm_number"
+            fi
+
             rm $tempfile
 
-            # reboot the vm
-            waitpoweroff "$vm_number"
-            if [ "$?" -ne 0 ]; then
-                echo "Failed to shut down vm ${vm_name}."
-                return 1
+            if [ "$status" -eq 0 ]; then
+                main_fn start "$vm_number"
+                status=$?
             fi
 
-            main_fn start "$vm_number"
-            if [ "$?" -ne 0 ]; then
-                 echo "Failed to start cloned vm"
-                 main_fn delete "$vm_number"
-                 return 1
+            if [ "$status" -eq 0 ]; then
+                # copy monit script
+                main_fn copy-monit-script "$vm_number"
+                echo "VM ${vm_name} deployed."
+            else
+                echo "Failed to start cloned vm"
+                main_fn delete "$vm_number"
             fi
-
-            # copy monit script
-            main_fn copy-monit-script "$vm_number"
 
             # start the main
             main_fn start "$MAIN_VM_NUMBER"
@@ -381,8 +389,7 @@ function main_fn()
                  echo "Failed to start main vm"
             fi
 
-            echo "VM ${vm_name} deployed."
-            return 0
+            return $status
             ;;
         "status")
             local vm_number=$2
