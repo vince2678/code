@@ -87,23 +87,6 @@ function main_fn()
             echo $ip
             return 0
             ;;
-        get-vms)
-            for vm_number in `get_vm_numbers`; do
-                local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
-
-                is_running "$vm_name"
-                if [ "$?" -eq 0 ]; then
-                    ip=`getpublicip $vm_number`
-                    if [ "$?" -eq 0 ]; then
-                        echo "${vm_name} [RUNNING] ($ip)"
-                    else
-                        echo "${vm_name} [RUNNING] (unknown public ip)"
-                    fi
-                else
-                    echo "${vm_name} [NOT RUNNING]"
-                fi
-            done
-            ;;
         pause)
             local VM_NUMBER=$2
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
@@ -331,26 +314,7 @@ function main_fn()
         status)
             local VM_NUMBER=$2
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
-
-            is_valid_number $VM_NUMBER
-            if [ "$?" -ne 0 ]; then
-                echo "No such vm number"
-                return 1
-            fi
-
-            is_running "$VM_NAME"
-
-            if [ "$?" -eq 0 ]; then
-                echo "${VM_NAME} Running"
-                return 0
-            else
-                echo "${VM_NAME} Not running"
-                return 1
-            fi
-            ;;
-        status-proxy)
-            local VM_NUMBER=$2
-            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
             local socks_port=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
             is_valid_number $VM_NUMBER
@@ -359,14 +323,32 @@ function main_fn()
                 return 1
             fi
 
-            issocksactive $VM_NUMBER
-            if [ "$?" -eq 0 ]; then
-                echo "Socks tunnel for ${VM_NAME} active on port ${socks_port}"
-                return 0
+            is_running "$VM_NAME"
+            status=$?
+
+            if [ "$status" -eq 0 ]; then
+                issocksactive $VM_NUMBER
+                if [ "$?" -eq 0 ]; then
+                    ip=`getpublicip $VM_NUMBER`
+
+                    echo "\"${VM_NAME}\": [RUNNING] *:${socks_port}:${VM_HOST_IP} -> $ip"
+                    return 0
+                else
+                    echo "\"${VM_NAME}\": [RUNNING] (tunnel inactive)"
+                    return 1
+                fi
             else
-                echo "Socks tunnel for ${VM_NAME} not active"
+                echo "\"${VM_NAME}\": [NOT RUNNING]"
                 return 1
             fi
+            ;;
+        status-all)
+            status=0
+            for vm_number in `get_vm_numbers`; do
+                main_fn status $vm_number
+                status=$(($status + $?))
+            done
+            return $status
             ;;
         *)
             help
@@ -376,7 +358,7 @@ function main_fn()
 
 function help()
 {
-    echo "Usage: $0 (deploy|delete|check-ip|get-vms|start|start-proxy|stop-proxy|status-proxy|pause|resume|stop|status) [VM_NUMBER]"
+    echo "Usage: $0 (deploy|delete|check-ip|start-proxy|stop-proxy|start|pause|resume|stop|status|status-all) [VM_NUMBER]"
     exit 1
 }
 
