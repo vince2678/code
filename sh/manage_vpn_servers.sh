@@ -243,7 +243,7 @@ function main_fn()
             ;;
         copy-monit-script)
             local vm_number=$2
-            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number+1))"
+            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
             local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
 
             if [ -z "$vm_number" ]; then
@@ -274,7 +274,7 @@ function main_fn()
             ;;
         remove-monit-script)
             local vm_number=$2
-            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number+1))"
+            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
             local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
 
             if [ -z "$vm_number" ]; then
@@ -299,7 +299,7 @@ function main_fn()
             fi
 
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
-            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number+1))"
+            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
             local vm_host_ip="${BASE_IP}$(($vm_number+1))"
 
             main_fn stop "$MAIN_VM_NUMBER"
@@ -699,7 +699,7 @@ function copy_script()
 function output_monit_config()
 {
 local vm_number=$1
-local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number+1))"
+local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
 local script_path=$2
 local output_file=$3
 
