@@ -40,6 +40,23 @@ function main_fn()
     fi
 
     case "$1" in
+        "connect")
+            local vm_number=$2
+            local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+
+            if [ -z "$vm_number" ]; then
+                help
+            fi
+
+            is_valid_number $vm_number
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                return 1
+            fi
+
+            $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip}
+            return $?
+            ;;
         "start")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
@@ -384,7 +401,7 @@ function main_fn()
 function help()
 {
     echo "Usage: $0 (start|pause|resume|stop|status|delete) [vm_number]"
-    echo "       $0 (check-ip|start-proxy|stop-proxy) [vm_number]"
+    echo "       $0 (connect|check-ip|start-proxy|stop-proxy) [vm_number]"
     echo "       $0 (deploy|status-all)"
     exit 1
 }
