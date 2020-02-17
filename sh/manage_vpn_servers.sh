@@ -42,8 +42,8 @@ function main_fn()
         return 1
     fi
 
-    case $1 in
-        start)
+    case "$1" in
+        "start")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
@@ -73,7 +73,7 @@ function main_fn()
             main_fn start-proxy "$vm_number"
             return $?
             ;;
-        check-ip)
+        "check-ip")
             local vm_number=$2
 
             is_valid_number $vm_number
@@ -92,7 +92,7 @@ function main_fn()
             echo $ip
             return 0
             ;;
-        pause)
+        "pause")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
@@ -117,7 +117,7 @@ function main_fn()
             main_fn stop-proxy "$vm_number"
             return $?
             ;;
-        resume)
+        "resume")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
@@ -142,7 +142,7 @@ function main_fn()
             main_fn start-proxy "$vm_number"
             return $?
             ;;
-        stop)
+        "stop")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
@@ -166,7 +166,7 @@ function main_fn()
             main_fn stop-proxy "$vm_number"
             return $?
             ;;
-        start-proxy)
+        "start-proxy")
             local vm_number=$2
 
             if [ -z "$vm_number" ]; then
@@ -192,7 +192,7 @@ function main_fn()
             fi
             return 0
             ;;
-        stop-proxy)
+        "stop-proxy")
             local vm_number=$2
 
             if [ -z "$vm_number" ]; then
@@ -218,7 +218,7 @@ function main_fn()
             fi
             return 0
             ;;
-        delete)
+        "delete")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
@@ -245,7 +245,7 @@ function main_fn()
             main_fn remove-monit-script "$vm_number"
             return $?
             ;;
-        copy-monit-script)
+        "copy-monit-script")
             local vm_number=$2
             local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
             local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
@@ -276,7 +276,7 @@ function main_fn()
                 return 1
             fi
             ;;
-        remove-monit-script)
+        "remove-monit-script")
             local vm_number=$2
             local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
             local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
@@ -295,7 +295,7 @@ function main_fn()
             $MONIT reload
             return $?
             ;;
-        deploy)
+        "deploy")
             local vm_number=`get_next_number`
             if [ -z "$vm_number" ]; then
                 echo "Could not get next vm number"
@@ -386,7 +386,7 @@ function main_fn()
             echo "VM ${vm_name} deployed."
             return 0
             ;;
-        status)
+        "status")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
             local vm_host_ip="${BASE_IP}$(($vm_number+1))"
@@ -417,7 +417,7 @@ function main_fn()
                 return 3
             fi
             ;;
-        status-all)
+        "status-all")
             status=0
             for vm_number in `get_vm_numbers`; do
                 main_fn status $vm_number
