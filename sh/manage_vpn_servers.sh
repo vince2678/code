@@ -55,7 +55,7 @@ function main_fn()
                 return 1
             fi
 
-            $SSH root@${vm_host_ip}
+            $SSH ${SCRIPT_USER}@${vm_host_ip}
             return $?
             ;;
         "start")
@@ -487,7 +487,7 @@ function getpublicip()
     if [ "$running" == "false" ]; then
        return 1;
     fi
-    $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
+    $SSH ${SCRIPT_USER}@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
     return $?
 }
 
@@ -622,7 +622,7 @@ function waitonip()
     local status=1
     local start=`date +%s`
     while [ "$status" -ne 0 ]; do
-        $SSH root@${1} "echo Host $1 is now up." 2>/dev/null
+        $SSH ${SCRIPT_USER}@${1} "echo Host $1 is now up." 2>/dev/null
         status=$?
 
         local now=`date +%s`
