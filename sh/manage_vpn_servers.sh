@@ -1,8 +1,11 @@
 #!/bin/bash
 
-VBOXPATH="/usr/bin/VBoxManage"
+VBOXMANAGE="/usr/bin/VBoxManage"
 SSH="/usr/bin/ssh"
 DAEMON="/usr/bin/daemon"
+RUNUSER="/sbin/runuser"
+
+SCRIPT_USER="vincent"
 
 MAIN_VM="Debian [VPN-1]"
 MAIN_VM_NUMBER=1
@@ -29,6 +32,12 @@ MAX_POWERON_WAIT=90
 
 function main_fn()
 {
+    if [ "$USER" != "root" ]; then
+        echo "Error: run this script as root"
+        help
+        return 1
+    fi
+
     case $1 in
         start)
             local VM_NUMBER=$2
@@ -247,9 +256,9 @@ function main_fn()
                 return 1
             fi
 
-            local snapshot=`$VBOXPATH snapshot "$MAIN_VM" list | grep -oF "$MAIN_SNAPSHOT"`
+            local snapshot=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE snapshot "$MAIN_VM" list | grep -oF "$MAIN_SNAPSHOT"`
             if [ -z "$snapshot" ]; then
-                $VBOXPATH snapshot "$MAIN_VM" take "$MAIN_SNAPSHOT"
+                $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE snapshot "$MAIN_VM" take "$MAIN_SNAPSHOT"
             fi
 
             # clone the main vm
@@ -289,11 +298,11 @@ function main_fn()
             scp $TEMPFILE root@${MAIN_IP}:$TEMPFILE
 
             # execute it
-            $SSH root@${MAIN_IP} "chmod +x $TEMPFILE"
-            $SSH root@${MAIN_IP} "$TEMPFILE $VM_HOSTNAME $VM_HOST_IP"
+            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "chmod +x $TEMPFILE"
+            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "$TEMPFILE $VM_HOSTNAME $VM_HOST_IP"
 
             # clean up
-            $SSH root@${MAIN_IP} "rm $TEMPFILE"
+            $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $TEMPFILE"
             rm $TEMPFILE
 
             # reboot the vm
@@ -372,7 +381,7 @@ function help()
 }
 
 function get_next_number {
-    LAST=`VBoxManage list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort | tail -n 1`
+    LAST=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort | tail -n 1`
     echo $(($LAST+1))
 }
 
@@ -391,14 +400,14 @@ function is_valid_number {
 }
 
 function get_vm_numbers {
-    local vm_numbers=`VBoxManage list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort`
+    local vm_numbers=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort`
     echo $vm_numbers
 }
 
 # returns 0 if vm running, 1 otherwise
 function is_running()
 {
-    output=`$VBOXPATH list runningvms | grep -oF "$1"`
+    output=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list runningvms | grep -oF "$1"`
     if [ "$output" == "$1" ]; then
         return 0
     else
@@ -413,7 +422,7 @@ function startvm()
        return 0;
     fi
     echo "Starting vm ${1}..."
-    $VBOXPATH startvm "$1" --type headless
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE startvm "$1" --type headless
     return $?
 }
 
@@ -428,7 +437,7 @@ function getpublicip()
     if [ "$?" -eq 1 ]; then
        return 1;
     fi
-    $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
+    $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
     return $?
 }
 
@@ -500,7 +509,7 @@ function issocksactive()
 function deletevm()
 {
     echo "Deleting vm ${1}..."
-    $VBOXPATH unregistervm "$1" --delete
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE unregistervm "$1" --delete
     return $?
 }
 
@@ -508,7 +517,7 @@ function deletevm()
 function clonevm()
 {
     echo "Cloning vm ${1}..."
-    $VBOXPATH clonevm "$1" --groups $GROUP_NAME \
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE clonevm "$1" --groups $GROUP_NAME \
        --mode machine --name "$2" --options link \
        --register --snapshot $MAIN_SNAPSHOT
     return $?
@@ -517,21 +526,21 @@ function clonevm()
 function resumevm()
 {
     echo "Resuming vm ${1}..."
-    $VBOXPATH controlvm "$1" resume
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$1" resume
     return $?
 }
 
 function pausevm()
 {
     echo "Pausing vm ${1}..."
-    $VBOXPATH controlvm "$1" pause
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$1" pause
     return $?
 }
 
 function hardresetvm()
 {
     echo "Resetting vm ${1}..."
-    $VBOXPATH controlvm "$1" reset
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$1" reset
     return $?
 }
 
@@ -540,7 +549,7 @@ function poweroffvm()
 {
     local VM_NAME=$1
     echo "Powering off vm ${VM_NAME}..."
-    $VBOXPATH controlvm "$VM_NAME" poweroff
+    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$VM_NAME" poweroff
     return $?
 }
 
@@ -550,7 +559,7 @@ function acpipoweroffvm()
     local VM_NUMBER=$1
     local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
 
-    $SSH root@${VM_HOST_IP} "init 0"
+    $RUNUSER -u $SCRIPT_USER -- $SSH root@${VM_HOST_IP} "init 0"
     return $?
 }
 
@@ -560,7 +569,7 @@ function waitonip()
     local status=1
     local start=`date +%s`
     while [ "$status" -ne 0 ]; do
-        $SSH root@${1} "echo Host $1 is now up." 2>/dev/null
+        $RUNUSER -u $SCRIPT_USER -- $SSH root@${1} "echo Host $1 is now up." 2>/dev/null
         status=$?
 
         sleep 5
