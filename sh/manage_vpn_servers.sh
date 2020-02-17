@@ -1,8 +1,8 @@
 #!/bin/bash
 
 VBOXPATH="/usr/bin/VBoxManage"
-MONIT="/usr/bin/monit"
 SSH="/usr/bin/ssh"
+DAEMON="/usr/bin/daemon"
 
 MAIN_VM="Debian [VPN-1]"
 MAIN_VM_NUMBER=1
@@ -14,14 +14,13 @@ SEARCH_REGEXP="Debian \[VPN\-[0-9]*\]"
 BASE_CLONE_PREFIX="Debian [VPN-"
 BASE_CLONE_SUFFIX="]"
 HOSTNAME_PREFIX='debian-vpn-'
+
 BASE_IP="192.168.56."
 BASE_SOCKS_PORT=1080
-BASE_MONIT_SERVICE_PREFIX="socks-"
 
-MAIN_MONIT_SERVICE="${BASE_MONIT_SERVICE_PREFIX}${BASE_SOCKS_PORT}"
-
-MONIT_AVAILABLE_DIR="/etc/monit/conf-available"
-MONIT_ENABLED_DIR="/etc/monit/conf-enabled"
+SOCKS_PID_DIR="/run/socks/"
+SOCKS_OWNER="vincent"
+SOCKS_DAEMON_PREFIX="socks-"
 
 GROUP_NAME="/VPN"
 
@@ -33,9 +32,7 @@ function main_fn()
     case $1 in
         start)
             local VM_NUMBER=$2
-            local IN_MONIT=$3
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
-            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
             if [ -z "$VM_NUMBER" ]; then
                 help
@@ -59,14 +56,7 @@ function main_fn()
                 return 1
             fi
 
-            # start monit services
-            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
-
-            if [ -z "$IN_MONIT" ]; then
-                    echo "Starting monit service ${monit_service}..."
-                    sudo ${MONIT} start ${monit_service}
-            fi
-
+            main_fn start-proxy "$VM_NUMBER"
             return $?
             ;;
         check-ip)
@@ -80,7 +70,7 @@ function main_fn()
 
             ip=`getpublicip $VM_NUMBER`
             status=$?
-            if [ "$status" -ne 1 ]; then
+            if [ "$status" -eq 1 ]; then
                 echo "Failed to get public ip"
                 return $status
             fi
@@ -120,6 +110,13 @@ function main_fn()
             fi
 
             pausevm "$VM_NAME"
+            status=$?
+            if [ "$status" -ne 0 ]; then
+                echo "Failed to pause $VM_NAME"
+                return $status
+            fi
+
+            main_fn stop-proxy "$VM_NUMBER"
             return $?
             ;;
         resume)
@@ -137,13 +134,18 @@ function main_fn()
             fi
 
             resumevm "$VM_NAME"
+            status=$?
+            if [ "$status" -ne 0 ]; then
+                echo "Failed to resume $VM_NAME"
+                return $status
+            fi
+
+            main_fn start-proxy "$VM_NUMBER"
             return $?
             ;;
         stop)
             local VM_NUMBER=$2
-            local IN_MONIT=$3
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
-            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
             if [ -z "$VM_NUMBER" ]; then
                 help
@@ -161,14 +163,50 @@ function main_fn()
                 return 1
             fi
 
-            # stop monit services
-            if [ -z "$IN_MONIT" ]; then
-                    local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
-                    echo "Stopping monit service ${monit_service}..."
-                    sudo ${MONIT} stop ${monit_service}
+            main_fn stop-proxy "$VM_NUMBER"
+            return $?
+            ;;
+        start-proxy)
+            local VM_NUMBER=$2
+
+            if [ -z "$VM_NUMBER" ]; then
+                help
             fi
 
-            return $?
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                return 1
+            fi
+
+            issocksactive "$VM_NUMBER"
+            status=$?
+            if [ "$status" -ne 0 ]; then
+                startsocksproxy "$VM_NUMBER"
+                return $status
+            fi
+            return 0
+            ;;
+        stop-proxy)
+            local VM_NUMBER=$2
+
+            if [ -z "$VM_NUMBER" ]; then
+                help
+            fi
+
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                return 1
+            fi
+
+            issocksactive "$VM_NUMBER"
+            status=$?
+            if [ "$status" -eq 0 ]; then
+                stopsocksproxy "$VM_NUMBER"
+                return $status
+            fi
+            return 0
             ;;
         delete)
             local VM_NUMBER=$2
@@ -181,36 +219,20 @@ function main_fn()
                 return 1
             fi
 
-            is_valid_number $VM_NUMBER
+            main_fn stop "$VM_NUMBER"
             if [ "$?" -ne 0 ]; then
-                echo "No such vm number"
-                return 1
-            fi
-
-            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
-
-            waitpoweroff "$VM_NUMBER"
-            if [ "$?" -ne 0 ]; then
-                echo "Failed to shut down vm."
                 return 1
             fi
 
             deletevm "$VM_NAME"
-
-            # remove monit config
-            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
-
-            sudo ${MONIT} stop ${monit_service}
-            sudo rm -f ${MONIT_AVAILABLE_DIR}/${monit_service}
-            sudo rm -f ${MONIT_ENABLED_DIR}/${monit_service}
-            sudo ${MONIT} reload
-
-            return $?
+            status=$?
+            if [ "$status" -ne 0 ]; then
+                echo "Failed to delete vm ${VM_NAME}."
+                return $status
+            fi
             ;;
         deploy)
-            get_next_number
-            local VM_NUMBER=$?
-
+            local VM_NUMBER=`get_next_number`
             if [ -z "$VM_NUMBER" ]; then
                 echo "Could not get next vm number"
                 return 1
@@ -219,16 +241,11 @@ function main_fn()
             local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
             local VM_HOSTNAME="${HOSTNAME_PREFIX}$(($VM_NUMBER+1))"
             local VM_HOST_IP="${BASE_IP}$(($VM_NUMBER+1))"
-            local VM_SOCKS_PORT=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
 
-            waitpoweroff "$MAIN_VM_NUMBER"
+            main_fn stop "$MAIN_VM_NUMBER"
             if [ "$?" -ne 0 ]; then
-                echo "Failed to shut down vm $MAIN_VM."
                 return 1
             fi
-
-            # stop monit service
-            sudo ${MONIT} stop ${MAIN_MONIT_SERVICE}
 
             local snapshot=`$VBOXPATH snapshot "$MAIN_VM" list | grep -oF "$MAIN_SNAPSHOT"`
             if [ -z "$snapshot" ]; then
@@ -246,7 +263,7 @@ function main_fn()
             startvm "$VM_NAME"
             if [ "$?" -ne 0 ]; then
                  echo "Failed to start cloned vm"
-                 deletevm "$VM_NAME"
+                 main_fn delete "$VM_NUMBER"
                  main_fn start "$MAIN_VM_NUMBER"
                  return 1
             fi
@@ -282,42 +299,25 @@ function main_fn()
             # reboot the vm
             waitpoweroff "$VM_NUMBER"
             if [ "$?" -ne 0 ]; then
-                echo "Failed to shut down vm $VM_NAME."
+                echo "Failed to shut down vm ${VM_NAME}."
                 return 1
             fi
 
-            startvm "$VM_NAME"
+            main_fn start "$VM_NUMBER"
             if [ "$?" -ne 0 ]; then
                  echo "Failed to start cloned vm"
                  main_fn delete "$VM_NUMBER"
                  return 1
             fi
 
-            #make sure it's up
-            waitonip "$VM_HOST_IP"
-
             # start the main
-            startvm "$MAIN_VM"
+            main_fn start "$MAIN_VM_NUMBER"
             if [ "$?" -ne 0 ]; then
                  echo "Failed to start main vm"
             fi
 
-            # copy monit script
-            TEMPFILE=$(tempfile)
-            output_monit_script "$VM_SOCKS_PORT" "$VM_HOST_IP" "$TEMPFILE"
-
-            #we need root here
-            local monit_service="${BASE_MONIT_SERVICE_PREFIX}${VM_SOCKS_PORT}"
-
-            sudo cp $TEMPFILE ${MONIT_AVAILABLE_DIR}/${monit_service}
-            sudo ln -s ${MONIT_AVAILABLE_DIR}/${monit_service} ${MONIT_ENABLED_DIR}
-
-            # start monit services
-            sudo ${MONIT} reload
-
-            echo "VM $VM_NAME deployed."
-
-            rm $TEMPFILE
+            echo "VM ${VM_NAME} deployed."
+            return 0
             ;;
         status)
             local VM_NUMBER=$2
@@ -332,10 +332,30 @@ function main_fn()
             is_running "$VM_NAME"
 
             if [ "$?" -eq 0 ]; then
-                echo "Running"
+                echo "${VM_NAME} Running"
                 return 0
             else
-                echo "Not running"
+                echo "${VM_NAME} Not running"
+                return 1
+            fi
+            ;;
+        status-proxy)
+            local VM_NUMBER=$2
+            local VM_NAME="${BASE_CLONE_PREFIX}${VM_NUMBER}${BASE_CLONE_SUFFIX}"
+            local socks_port=$(($VM_NUMBER - 1 + $BASE_SOCKS_PORT))
+
+            is_valid_number $VM_NUMBER
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                return 1
+            fi
+
+            issocksactive $VM_NUMBER
+            if [ "$?" -eq 0 ]; then
+                echo "Socks tunnel for ${VM_NAME} active on port ${socks_port}"
+                return 0
+            else
+                echo "Socks tunnel for ${VM_NAME} not active"
                 return 1
             fi
             ;;
@@ -347,13 +367,13 @@ function main_fn()
 
 function help()
 {
-    echo "Usage: $0 (deploy|delete|check-ip|get-vms|start|pause|resume|stop|status) [VM_NUMBER] [IN_MONIT]"
+    echo "Usage: $0 (deploy|delete|check-ip|get-vms|start|start-proxy|stop-proxy|status-proxy|pause|resume|stop|status) [VM_NUMBER]"
     exit 1
 }
 
 function get_next_number {
     LAST=`VBoxManage list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort | tail -n 1`
-    return $(($LAST+1))
+    echo $(($LAST+1))
 }
 
 # Usage: is_valid_number vm_number
@@ -409,6 +429,70 @@ function getpublicip()
        return 1;
     fi
     $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
+    return $?
+}
+
+#usage startsocksproxy vm_number
+# return 0 on success, 1 otherwise
+function startsocksproxy()
+{
+    local vm_number=$1
+    local socks_port=$(($vm_number - 1 + $BASE_SOCKS_PORT))
+    local socks_service="${SOCKS_DAEMON_PREFIX}${socks_port}"
+    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+
+    if ! [ -d "$SOCKS_PID_DIR" ]; then
+        mkdir $SOCKS_PID_DIR
+        chown ${SOCKS_OWNER}:${SOCKS_OWNER} $SOCKS_PID_DIR
+    fi
+
+    echo "Starting socks tunnel on port ${socks_port} through ${vm_host_ip}..."
+    $DAEMON -F ${SOCKS_PID_DIR}/${socks_service}.pid \
+            -u ${SOCKS_OWNER} -n ${socks_service} -- \
+            $SSH -D ${socks_port} -q -C -N ${SOCKS_OWNER}@${vm_host_ip}
+
+    return $?
+}
+
+#usage stopsocksproxy vm_number
+# return 0 on success, 1 otherwise
+function stopsocksproxy()
+{
+    local vm_number=$1
+    local socks_port=$(($vm_number - 1 + $BASE_SOCKS_PORT))
+    local socks_service="${SOCKS_DAEMON_PREFIX}${socks_port}"
+    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+
+    if ! [ -d "$SOCKS_PID_DIR" ]; then
+        mkdir $SOCKS_PID_DIR
+        chown ${SOCKS_OWNER}:${SOCKS_OWNER} $SOCKS_PID_DIR
+        return 0
+    fi
+
+    echo "Stopping socks tunnel on port ${socks_port} through ${vm_host_ip}..."
+    $DAEMON -F ${SOCKS_PID_DIR}/${socks_service}.pid \
+            -n ${socks_service} --stop
+
+    return $?
+}
+
+#usage issocksactive vm_number
+# return 0 if running, 1 otherwise
+function issocksactive()
+{
+    local vm_number=$1
+    local socks_port=$(($vm_number - 1 + $BASE_SOCKS_PORT))
+    local socks_service="${SOCKS_DAEMON_PREFIX}${socks_port}"
+
+    if ! [ -d "$SOCKS_PID_DIR" ]; then
+        mkdir $SOCKS_PID_DIR
+        chown ${SOCKS_OWNER}:${SOCKS_OWNER} $SOCKS_PID_DIR
+        return 1
+    fi
+
+    $DAEMON -F ${SOCKS_PID_DIR}/${socks_service}.pid \
+            -n ${socks_service} --running
+
     return $?
 }
 
@@ -520,24 +604,6 @@ function waitpoweroff()
     echo "Failed acpi shutdown, attempting hard poweroff..."
     poweroffvm "$VM_NAME"
     return $?
-}
-
-# usage: output_monit_script port ip_address /path/to/file
-function output_monit_script()
-{
-local user=vincent
-local port=$1
-local ip_addr=$2
-local output=$3
-cat << MONIT_SCRIPT > $output
-check process socks-${port} with pidfile "/var/run/socks/socks-${port}.pid"
-   group www
-   group windscribe
-   group socks-${port}
-   start program = "/usr/bin/daemon -F /var/run/socks/socks-${port}.pid -u ${user} -n socks-${port} -- /usr/bin/ssh -D ${port} -q -C -N ${user}@${ip_addr}"
-   stop program = "/usr/bin/daemon -F /var/run/socks/socks-${port}.pid --stop -n socks-${port}"
-   if 4 restarts within 20 cycles then timeout
-MONIT_SCRIPT
 }
 
 # arg 1: path to output
