@@ -2,6 +2,7 @@
 
 VBOXMANAGE="/usr/bin/VBoxManage"
 SSH="/usr/bin/ssh"
+SCP="/usr/bin/scp"
 DAEMON="/usr/bin/daemon"
 RUNUSER="/sbin/runuser"
 REALPATH="/usr/bin/realpath"
@@ -347,7 +348,7 @@ function main_fn()
             # copy the deploy script
             local tempfile=$(tempfile)
             output_deploy_script "$tempfile"
-            scp $tempfile root@${MAIN_IP}:$tempfile
+            $RUNUSER -u $SCRIPT_USER -- $SCP $tempfile root@${MAIN_IP}:$tempfile
 
             # execute it
             $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "chmod +x $tempfile"
