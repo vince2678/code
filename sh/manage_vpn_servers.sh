@@ -67,7 +67,7 @@ function main_fn()
 
             waitonip "$vm_host_ip"
             if [ "$?" -ne 0 ]; then
-                echo "Timed out waiting for vm $vm_name to start"
+                echo "Timed out waiting for vm $vm_name to start on ip $vm_host_ip"
                 return 1
             fi
 
@@ -363,7 +363,7 @@ function main_fn()
                 $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $tempfile"
 
                 # shutdown the vm
-                waitpoweroff "$vm_number" "$vm_name"
+                waitpoweroff "$vm_number" "$MAIN_IP"
                 status=$?
             else
                 echo "Failed to copy setup script to $vm_name"
@@ -730,7 +730,7 @@ function copy_script()
         output_name=${output_name}/${script_name}
     fi
 
-    if ! [ -e "$output_name" ]; then
+    if [ "$script_path" != "`$REALPATH $output_name`" ]; then
         cp $script_path $output_name
     fi
 
