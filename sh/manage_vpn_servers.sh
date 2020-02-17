@@ -47,6 +47,7 @@ function main_fn()
         "start")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+            local vm_host_ip="${BASE_IP}$(($vm_number+1))"
 
             if [ -z "$vm_number" ]; then
                 help
@@ -64,7 +65,7 @@ function main_fn()
                  return 1
             fi
 
-            waitonip "$MAIN_IP"
+            waitonip "$vm_host_ip"
             if [ "$?" -ne 0 ]; then
                 echo "Timed out waiting for vm $vm_name to start"
                 return 1
