@@ -22,7 +22,6 @@ BASE_IP="192.168.56."
 BASE_SOCKS_PORT=1080
 
 SOCKS_PID_DIR="/run/socks/"
-SOCKS_OWNER="vincent"
 SOCKS_DAEMON_PREFIX="socks-"
 
 GROUP_NAME="/VPN"
@@ -434,13 +433,13 @@ function startsocksproxy()
 
     if ! [ -d "$SOCKS_PID_DIR" ]; then
         mkdir $SOCKS_PID_DIR
-        chown ${SOCKS_OWNER}:${SOCKS_OWNER} $SOCKS_PID_DIR
+        chown ${SCRIPT_USER}:${SCRIPT_USER} $SOCKS_PID_DIR
     fi
 
     echo "Starting socks tunnel on port ${socks_port} through ${vm_host_ip}..."
     $DAEMON -F ${SOCKS_PID_DIR}/${socks_service}.pid \
-            -u ${SOCKS_OWNER} -n ${socks_service} -- \
-            $SSH -D ${socks_port} -q -C -N ${SOCKS_OWNER}@${vm_host_ip}
+            -u ${SCRIPT_USER} -n ${socks_service} -- \
+            $SSH -D ${socks_port} -q -C -N ${SCRIPT_USER}@${vm_host_ip}
 
     return $?
 }
@@ -456,7 +455,7 @@ function stopsocksproxy()
 
     if ! [ -d "$SOCKS_PID_DIR" ]; then
         mkdir $SOCKS_PID_DIR
-        chown ${SOCKS_OWNER}:${SOCKS_OWNER} $SOCKS_PID_DIR
+        chown ${SCRIPT_USER}:${SCRIPT_USER} $SOCKS_PID_DIR
         return 0
     fi
 
@@ -477,7 +476,7 @@ function issocksactive()
 
     if ! [ -d "$SOCKS_PID_DIR" ]; then
         mkdir $SOCKS_PID_DIR
-        chown ${SOCKS_OWNER}:${SOCKS_OWNER} $SOCKS_PID_DIR
+        chown ${SCRIPT_USER}:${SCRIPT_USER} $SOCKS_PID_DIR
         return 1
     fi
 
