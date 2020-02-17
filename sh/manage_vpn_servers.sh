@@ -87,6 +87,14 @@ function main_fn()
             main_fn start-proxy "$vm_number"
             return $?
             ;;
+        "start-all")
+            status=0
+            for vm_number in `get_vm_numbers`; do
+                main_fn start $vm_number
+                status=$(($status + $?))
+            done
+            return $status
+            ;;
         "check-ip")
             local vm_number=$2
 
@@ -176,6 +184,14 @@ function main_fn()
 
             main_fn stop-proxy "$vm_number"
             return $?
+            ;;
+        "stop-all")
+            status=0
+            for vm_number in `get_vm_numbers`; do
+                main_fn stop $vm_number
+                status=$(($status + $?))
+            done
+            return $status
             ;;
         "start-proxy")
             local vm_number=$2
@@ -402,7 +418,7 @@ function help()
 {
     echo "Usage: $0 (start|pause|resume|stop|status|delete) [vm_number]"
     echo "       $0 (connect|check-ip|start-proxy|stop-proxy) [vm_number]"
-    echo "       $0 (deploy|status-all)"
+    echo "       $0 (deploy|status-all|start-all|stop-all)"
     exit 1
 }
 
