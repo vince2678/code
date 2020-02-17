@@ -423,7 +423,7 @@ function help()
 }
 
 function get_next_number {
-    LAST=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort | tail -n 1`
+    LAST=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort -n | tail -n 1`
     echo $(($LAST+1))
 }
 
@@ -442,7 +442,7 @@ function is_valid_number {
 }
 
 function get_vm_numbers {
-    local vm_numbers=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort`
+    local vm_numbers=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort -n`
     echo $vm_numbers
 }
 
