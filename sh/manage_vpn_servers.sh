@@ -1,8 +1,8 @@
 #!/bin/bash
 
 VBOXMANAGE="/usr/bin/VBoxManage"
-SSH="/usr/bin/ssh"
-SCP="/usr/bin/scp"
+SSH="/usr/bin/ssh -o StrictHostKeyChecking=no"
+SCP="/usr/bin/scp -o StrictHostKeyChecking=no"
 DAEMON="/usr/bin/daemon"
 RUNUSER="/sbin/runuser"
 REALPATH="/usr/bin/realpath"
