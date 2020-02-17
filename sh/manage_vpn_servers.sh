@@ -285,15 +285,12 @@ function main_fn()
                 help
             fi
 
-            is_valid_number $vm_number
-            if [ "$?" -ne 0 ]; then
-                echo "No such vm number"
-                return 1
+            if [ -e "$enabled_config_path" ]; then
+                rm -f $enabled_config_path
+                $MONIT reload
+                return $?
             fi
-
-            rm -f $enabled_config_path
-            $MONIT reload
-            return $?
+	    return 0
             ;;
         "deploy")
             local vm_number=`get_next_number`
