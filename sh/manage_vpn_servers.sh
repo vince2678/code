@@ -348,7 +348,7 @@ function main_fn()
             fi
 
             # copy the deploy script
-            local tempfile=$(tempfile)
+            local tempfile=$(tempfile --mode 644)
             output_deploy_script "$tempfile"
             $RUNUSER -u $SCRIPT_USER -- $SCP $tempfile root@${MAIN_IP}:$tempfile
 
