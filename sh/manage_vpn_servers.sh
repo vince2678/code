@@ -381,8 +381,11 @@ function main_fn()
                 main_fn copy-monit-script "$vm_number"
                 echo "VM ${vm_name} deployed."
             else
-                echo "Failed to start cloned vm"
-                main_fn delete "$vm_number"
+                is_valid_number "$vm_number"
+                if [ "$?" -eq 0 ]; then
+                    echo "Failed to start cloned vm"
+                    main_fn delete "$vm_number"
+                fi
             fi
 
             # start the main
