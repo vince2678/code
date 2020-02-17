@@ -186,6 +186,11 @@ function main_fn()
             return $?
             ;;
         "stop-all")
+            # quick shutdown first
+            for vm_number in `get_vm_numbers`; do
+                acpipoweroff $vm_number
+            done
+
             status=0
             for vm_number in `get_vm_numbers`; do
                 main_fn stop $vm_number
