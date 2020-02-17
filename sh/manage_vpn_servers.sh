@@ -6,7 +6,6 @@ SCP="/usr/bin/scp -o StrictHostKeyChecking=no"
 DAEMON="/usr/bin/daemon"
 RUNUSER="/sbin/runuser"
 REALPATH="/usr/bin/realpath"
-MONIT="/usr/bin/monit"
 
 SCRIPT_USER="vincent"
 
@@ -26,9 +25,6 @@ BASE_SOCKS_PORT=1080
 
 SOCKS_PID_DIR="/run/socks/"
 SOCKS_DAEMON_PREFIX="socks-"
-
-MONIT_DIR="/etc/monit"
-MONIT_ENABLED_DIR="${MONIT_DIR}/conf-enabled"
 
 GROUP_NAME="/VPN"
 
@@ -71,7 +67,6 @@ function main_fn()
                 return 1
             fi
 
-            startmonitservice "$vm_number"
             main_fn start-proxy "$vm_number"
             return $?
             ;;
@@ -115,7 +110,6 @@ function main_fn()
                 return $status
             fi
 
-            stopmonitservice "$vm_number"
             main_fn stop-proxy "$vm_number"
             return $?
             ;;
@@ -140,7 +134,6 @@ function main_fn()
                 return $status
             fi
 
-            startmonitservice "$vm_number"
             main_fn start-proxy "$vm_number"
             return $?
             ;;
@@ -164,7 +157,6 @@ function main_fn()
                 return 1
             fi
 
-            stopmonitservice "$vm_number"
             main_fn stop-proxy "$vm_number"
             return $?
             ;;
@@ -245,56 +237,7 @@ function main_fn()
                 return $status
             fi
 
-            # delete monit script
-            main_fn remove-monit-script "$vm_number"
             return $?
-            ;;
-        "copy-monit-script")
-            local vm_number=$2
-            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
-            local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
-
-            if [ -z "$vm_number" ]; then
-                help
-            fi
-
-            is_valid_number $vm_number
-            if [ "$?" -ne 0 ]; then
-                echo "No such vm number"
-                return 1
-            fi
-
-            script_name=`copy_script "$MONIT_DIR"`
-            if [ "$?" -ne 0 ]; then
-                echo "Failed to copy script to monit dir"
-                return 1
-            fi
-
-            output_monit_config "$vm_number" "$script_name" "$enabled_config_path"
-            if [ "$?" -eq 0 ]; then
-                echo "Created monit config for ${vm_hostname}"
-                $MONIT reload
-                return $?
-            else
-                echo "Failed to generate monit config for ${vm_hostname}"
-                return 1
-            fi
-            ;;
-        "remove-monit-script")
-            local vm_number=$2
-            local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
-            local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
-
-            if [ -z "$vm_number" ]; then
-                help
-            fi
-
-            if [ -e "$enabled_config_path" ]; then
-                rm -f $enabled_config_path
-                $MONIT reload
-                return $?
-            fi
-            return 0
             ;;
         "deploy")
             local vm_number=`get_next_number`
@@ -378,8 +321,6 @@ function main_fn()
             fi
 
             if [ "$status" -eq 0 ]; then
-                # copy monit script
-                main_fn copy-monit-script "$vm_number"
                 echo "VM ${vm_name} deployed."
             else
                 is_valid_number "$vm_number"
@@ -444,7 +385,6 @@ function help()
 {
     echo "Usage: $0 (start|pause|resume|stop|status|delete) [vm_number]"
     echo "       $0 (check-ip|start-proxy|stop-proxy) [vm_number]"
-    echo "       $0 (copy-monit-script|remove-monit-script) [vm_number]"
     echo "       $0 (deploy|status-all)"
     exit 1
 }
@@ -509,32 +449,6 @@ function getpublicip()
        return 1;
     fi
     $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
-    return $?
-}
-
-#usage startmonitservice vm_number
-function startmonitservice()
-{
-    local vm_number=$1
-    local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
-    local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
-
-    if [ -f "$enabled_config_path" ]; then
-        $MONIT monitor $vm_hostname
-    fi
-    return $?
-}
-
-#usage stopmonitservice vm_number
-function stopmonitservice()
-{
-    local vm_number=$1
-    local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
-    local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
-
-    if [ -f "$enabled_config_path" ]; then
-        $MONIT unmonitor $vm_hostname
-    fi
     return $?
 }
 
@@ -737,22 +651,6 @@ function copy_script()
     chmod +x $output_name
     echo $output_name
     return 0
-}
-
-#usage: output_monit_config vm_number this_script_path config_path
-function output_monit_config()
-{
-local vm_number=$1
-local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
-local script_path=$2
-local output_file=$3
-
-cat << MONIT_SCRIPT > $output_file
-check program $vm_hostname with path "${script_path} status ${vm_number}"
-    if status = 1 then unmonitor
-    if status = 2 then exec "${script_path} start-proxy ${vm_number}"
-    if status = 3 then exec "${script_path} start ${vm_number}"
-MONIT_SCRIPT
 }
 
 # arg 1: path to output
