@@ -69,6 +69,7 @@ function main_fn()
                 return 1
             fi
 
+            startmonitservice "$vm_number"
             main_fn start-proxy "$vm_number"
             return $?
             ;;
@@ -112,6 +113,7 @@ function main_fn()
                 return $status
             fi
 
+            stopmonitservice "$vm_number"
             main_fn stop-proxy "$vm_number"
             return $?
             ;;
@@ -136,6 +138,7 @@ function main_fn()
                 return $status
             fi
 
+            startmonitservice "$vm_number"
             main_fn start-proxy "$vm_number"
             return $?
             ;;
@@ -159,6 +162,7 @@ function main_fn()
                 return 1
             fi
 
+            stopmonitservice "$vm_number"
             main_fn stop-proxy "$vm_number"
             return $?
             ;;
@@ -494,6 +498,32 @@ function getpublicip()
        return 1;
     fi
     $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
+    return $?
+}
+
+#usage startmonitservice vm_number
+function startmonitservice()
+{
+    local vm_number=$1
+    local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
+    local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
+
+    if [ -f "$enabled_config_path" ]; then
+        $MONIT monitor $vm_hostname
+    fi
+    return $?
+}
+
+#usage stopmonitservice vm_number
+function stopmonitservice()
+{
+    local vm_number=$1
+    local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
+    local enabled_config_path="${MONIT_ENABLED_DIR}/${vm_hostname}"
+
+    if [ -f "$enabled_config_path" ]; then
+        $MONIT unmonitor $vm_hostname
+    fi
     return $?
 }
 
