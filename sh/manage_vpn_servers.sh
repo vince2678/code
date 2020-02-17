@@ -4,7 +4,6 @@ VBOXMANAGE="/usr/bin/VBoxManage"
 SSH="/usr/bin/ssh -o ConnectTimeout=1 -o StrictHostKeyChecking=no"
 SCP="/usr/bin/scp -o StrictHostKeyChecking=no"
 DAEMON="/usr/bin/daemon"
-RUNUSER="/sbin/runuser"
 REALPATH="/usr/bin/realpath"
 
 SCRIPT_USER="vincent"
@@ -23,7 +22,7 @@ HOSTNAME_PREFIX='debian-vpn-'
 BASE_IP="192.168.56."
 BASE_SOCKS_PORT=1080
 
-SOCKS_PID_DIR="/run/socks/"
+SOCKS_PID_DIR="/run/user/$UID/socks/"
 SOCKS_DAEMON_PREFIX="socks-"
 
 GROUP_NAME="/VPN"
@@ -33,10 +32,12 @@ MAX_POWERON_WAIT=90
 
 function main_fn()
 {
-    if [ "$USER" != "root" ]; then
-        echo "Error: run this script as root"
-        help
-        return 1
+    if [ -z "$SCRIPT_USER" ]; then
+        SCRIPT_USER=$USER
+        SCRIPT_UID=$UID
+    else
+        SCRIPT_UID=`grep "$SCRIPT_USER" /etc/passwd|cut -d':' -f 3`
+        SOCKS_PID_DIR="/run/user/${SCRIPT_UID}/socks/"
     fi
 
     case "$1" in
@@ -54,7 +55,7 @@ function main_fn()
                 return 1
             fi
 
-            $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip}
+            $SSH root@${vm_host_ip}
             return $?
             ;;
         "start")
@@ -293,9 +294,9 @@ function main_fn()
                 return 1
             fi
 
-            local snapshot=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE snapshot "$MAIN_VM" list | grep -oF "$MAIN_SNAPSHOT"`
+            local snapshot=`$VBOXMANAGE snapshot "$MAIN_VM" list | grep -oF "$MAIN_SNAPSHOT"`
             if [ -z "$snapshot" ]; then
-                $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE snapshot "$MAIN_VM" take "$MAIN_SNAPSHOT"
+                $VBOXMANAGE snapshot "$MAIN_VM" take "$MAIN_SNAPSHOT"
             fi
 
             # clone the main vm
@@ -332,16 +333,16 @@ function main_fn()
             # copy the deploy script
             local tempfile=$(tempfile --mode 644)
             output_deploy_script "$tempfile"
-            $RUNUSER -u $SCRIPT_USER -- $SCP $tempfile root@${MAIN_IP}:$tempfile
+            $SCP $tempfile root@${MAIN_IP}:$tempfile
 
             status=$?
             if [ "$status" -eq 0 ]; then
                 # execute it
-                $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "chmod +x $tempfile"
-                $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "$tempfile $vm_hostname $vm_host_ip"
+                $SSH root@${MAIN_IP} "chmod +x $tempfile"
+                $SSH root@${MAIN_IP} "$tempfile $vm_hostname $vm_host_ip"
 
                 # clean up
-                $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $tempfile"
+                $SSH root@${MAIN_IP} "rm $tempfile"
 
                 # shutdown the vm
                 waitpoweroff "$vm_number" "$MAIN_IP"
@@ -428,7 +429,7 @@ function help()
 }
 
 function get_next_number {
-    LAST=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort -n | tail -n 1`
+    LAST=`$VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort -n | tail -n 1`
     echo $(($LAST+1))
 }
 
@@ -447,14 +448,14 @@ function is_valid_number {
 }
 
 function get_vm_numbers {
-    local vm_numbers=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort -n`
+    local vm_numbers=`$VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort -n`
     echo $vm_numbers
 }
 
 # returns 0 if vm running, 1 otherwise
 function is_running()
 {
-    output=`$RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE list runningvms | grep -oF "$1"`
+    output=`$VBOXMANAGE list runningvms | grep -oF "$1"`
     if [ "$output" == "$1" ]; then
         echo "true"
         return 0
@@ -471,7 +472,7 @@ function startvm()
        return 0;
     fi
     echo "Starting vm ${1}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE startvm "$1" --type headless
+    $VBOXMANAGE startvm "$1" --type headless
     return $?
 }
 
@@ -486,7 +487,7 @@ function getpublicip()
     if [ "$running" == "false" ]; then
        return 1;
     fi
-    $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
+    $SSH root@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
     return $?
 }
 
@@ -500,13 +501,12 @@ function startsocksproxy()
     local vm_host_ip="${BASE_IP}$(($vm_number+1))"
 
     if ! [ -d "$SOCKS_PID_DIR" ]; then
-        mkdir $SOCKS_PID_DIR
+        mkdir -p $SOCKS_PID_DIR
         chown ${SCRIPT_USER}:${SCRIPT_USER} $SOCKS_PID_DIR
     fi
 
     echo "Starting socks tunnel on port ${socks_port} through ${vm_host_ip}..."
-    $DAEMON -F ${SOCKS_PID_DIR}/${socks_service}.pid \
-            -u ${SCRIPT_USER} -n ${socks_service} -- \
+    $DAEMON -F ${SOCKS_PID_DIR}/${socks_service}.pid -n ${socks_service} -- \
             $SSH -D ${socks_port} -q -C -N ${SCRIPT_USER}@${vm_host_ip}
 
     return $?
@@ -522,7 +522,7 @@ function stopsocksproxy()
     local vm_host_ip="${BASE_IP}$(($vm_number+1))"
 
     if ! [ -d "$SOCKS_PID_DIR" ]; then
-        mkdir $SOCKS_PID_DIR
+        mkdir -p $SOCKS_PID_DIR
         chown ${SCRIPT_USER}:${SCRIPT_USER} $SOCKS_PID_DIR
         return 0
     fi
@@ -543,7 +543,7 @@ function issocksactive()
     local socks_service="${SOCKS_DAEMON_PREFIX}${socks_port}"
 
     if ! [ -d "$SOCKS_PID_DIR" ]; then
-        mkdir $SOCKS_PID_DIR
+        mkdir -p $SOCKS_PID_DIR
         chown ${SCRIPT_USER}:${SCRIPT_USER} $SOCKS_PID_DIR
         return 1
     fi
@@ -558,7 +558,7 @@ function issocksactive()
 function deletevm()
 {
     echo "Deleting vm ${1}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE unregistervm "$1" --delete
+    $VBOXMANAGE unregistervm "$1" --delete
     return $?
 }
 
@@ -566,7 +566,7 @@ function deletevm()
 function clonevm()
 {
     echo "Cloning vm ${1}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE clonevm "$1" --groups $GROUP_NAME \
+    $VBOXMANAGE clonevm "$1" --groups $GROUP_NAME \
        --mode machine --name "$2" --options link \
        --register --snapshot $MAIN_SNAPSHOT
     return $?
@@ -575,21 +575,21 @@ function clonevm()
 function resumevm()
 {
     echo "Resuming vm ${1}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$1" resume
+    $VBOXMANAGE controlvm "$1" resume
     return $?
 }
 
 function pausevm()
 {
     echo "Pausing vm ${1}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$1" pause
+    $VBOXMANAGE controlvm "$1" pause
     return $?
 }
 
 function hardresetvm()
 {
     echo "Resetting vm ${1}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$1" reset
+    $VBOXMANAGE controlvm "$1" reset
     return $?
 }
 
@@ -598,7 +598,7 @@ function poweroffvm()
 {
     local vm_name=$1
     echo "Powering off vm ${vm_name}..."
-    $RUNUSER -u $SCRIPT_USER -- $VBOXMANAGE controlvm "$vm_name" poweroff
+    $VBOXMANAGE controlvm "$vm_name" poweroff
     return $?
 }
 
@@ -612,7 +612,7 @@ function acpipoweroffvm()
         vm_host_ip="${BASE_IP}$(($vm_number+1))"
     fi
 
-    $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} "init 0"
+    $SSH root@${vm_host_ip} "init 0"
     return $?
 }
 
@@ -622,7 +622,7 @@ function waitonip()
     local status=1
     local start=`date +%s`
     while [ "$status" -ne 0 ]; do
-        $RUNUSER -u $SCRIPT_USER -- $SSH root@${1} "echo Host $1 is now up." 2>/dev/null
+        $SSH root@${1} "echo Host $1 is now up." 2>/dev/null
         status=$?
 
         local now=`date +%s`
