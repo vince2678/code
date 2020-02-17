@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VBOXMANAGE="/usr/bin/VBoxManage"
-SSH="/usr/bin/ssh -o StrictHostKeyChecking=no"
+SSH="/usr/bin/ssh -o ConnectTimeout=1 -o StrictHostKeyChecking=no"
 SCP="/usr/bin/scp -o StrictHostKeyChecking=no"
 DAEMON="/usr/bin/daemon"
 RUNUSER="/sbin/runuser"
@@ -361,8 +361,8 @@ function main_fn()
                 # clean up
                 $RUNUSER -u $SCRIPT_USER -- $SSH root@${MAIN_IP} "rm $tempfile"
 
-                # reboot the vm
-                waitpoweroff "$vm_number"
+                # shutdown the vm
+                waitpoweroff "$vm_number" "$vm_name"
                 status=$?
             else
                 echo "Failed to copy setup script to $vm_name"
@@ -653,7 +653,11 @@ function poweroffvm()
 function acpipoweroffvm()
 {
     local vm_number=$1
-    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+    local vm_host_ip=$2
+
+    if [ -z "$vm_host_ip" ]; then
+        vm_host_ip="${BASE_IP}$(($vm_number+1))"
+    fi
 
     $RUNUSER -u $SCRIPT_USER -- $SSH root@${vm_host_ip} "init 0"
     return $?
@@ -668,7 +672,6 @@ function waitonip()
         $RUNUSER -u $SCRIPT_USER -- $SSH root@${1} "echo Host $1 is now up." 2>/dev/null
         status=$?
 
-        sleep 5
         local now=`date +%s`
         local runtime=$((now-start))
         if [ "$runtime" -gt $MAX_POWERON_WAIT ]; then
@@ -678,7 +681,7 @@ function waitonip()
     return 0
 }
 
-# usage: waitpoweroffvm vm_number
+# usage: waitpoweroffvm vm_number [vm_ip]
 function waitpoweroff()
 {
     local vm_number=$1
@@ -690,7 +693,7 @@ function waitpoweroff()
     fi
 
     echo "Attempting to shut down vm ${vm_name}..."
-    acpipoweroffvm "$vm_number"
+    acpipoweroffvm "$vm_number" "$2"
 
     local start=`date +%s`
     local runtime=0
