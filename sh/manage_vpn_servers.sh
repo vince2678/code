@@ -73,7 +73,7 @@ function main_fn()
                 return 1
             fi
 
-            startvm "$vm_name"
+            startvm "$vm_number"
             if [ "$?" -ne 0 ]; then
                  echo "Failed to start vm $vm_name"
                  return 1
@@ -129,6 +129,17 @@ function main_fn()
                 return 1
             fi
 
+            local paused=`is_paused "$vm_number"`
+            if [ "$paused" == "true" ]; then
+                return 0
+            fi
+
+            local running=`is_running "$vm_number"`
+            if [ "$running" == "false" ]; then
+                echo "VM ${vm_name} is not running"
+                return 1
+            fi
+
             pausevm "$vm_name"
             status=$?
             if [ "$status" -ne 0 ]; then
@@ -138,6 +149,14 @@ function main_fn()
 
             main_fn stop-proxy "$vm_number"
             return $?
+            ;;
+        "pause-all")
+            status=0
+            for vm_number in `get_vm_numbers`; do
+                main_fn pause $vm_number
+                status=$(($status + $?))
+            done
+            return $status
             ;;
         "resume")
             local vm_number=$2
@@ -153,6 +172,12 @@ function main_fn()
                 return 1
             fi
 
+            local paused=`is_paused "$vm_number"`
+            if [ "$paused" == "false" ]; then
+                echo "VM ${vm_name} is not paused"
+                return 1
+            fi
+
             resumevm "$vm_name"
             status=$?
             if [ "$status" -ne 0 ]; then
@@ -162,6 +187,14 @@ function main_fn()
 
             main_fn start-proxy "$vm_number"
             return $?
+            ;;
+        "resume-all")
+            status=0
+            for vm_number in `get_vm_numbers`; do
+                main_fn resume $vm_number
+                status=$(($status + $?))
+            done
+            return $status
             ;;
         "stop")
             local vm_number=$2
@@ -177,6 +210,15 @@ function main_fn()
                 return 1
             fi
 
+            local paused=`is_paused "$vm_number"`
+            if [ "$paused" == "true" ]; then
+                main_fn resume "$vm_number"
+
+                if [ "$?" -ne 0 ]; then
+                    echo "Failed to resume VM ${vm_name}"
+                fi
+            fi
+
             waitpoweroff "$vm_number"
             if [ "$?" -ne 0 ]; then
                 echo "Failed to shut down vm $vm_name."
@@ -189,7 +231,10 @@ function main_fn()
         "stop-all")
             # quick shutdown first
             for vm_number in `get_vm_numbers`; do
-                acpipoweroff $vm_number
+            local running=`is_running "$vm_number"`
+            if [ "$running" == "true" ]; then
+                acpipoweroffvm $vm_number
+            fi
             done
 
             status=0
@@ -307,7 +352,7 @@ function main_fn()
             fi
 
             # wait for vm to be up on the main ip
-            startvm "$vm_name"
+            startvm "$vm_number"
             if [ "$?" -ne 0 ]; then
                  echo "Failed to start cloned vm"
                  main_fn delete "$vm_number"
@@ -389,7 +434,13 @@ function main_fn()
                 return 1
             fi
 
-            local running=`is_running "$vm_name"`
+            local paused=`is_paused "$vm_number"`
+            if [ "$paused" == "true" ]; then
+                echo "\"${vm_name}\": [PAUSED]"
+                return 0
+            fi
+
+            local running=`is_running "$vm_number"`
             if [ "$running" == "true" ]; then
                 issocksactive $vm_number
                 if [ "$?" -eq 0 ]; then
@@ -424,7 +475,7 @@ function help()
 {
     echo "Usage: $0 (start|pause|resume|stop|status|delete) [vm_number]"
     echo "       $0 (connect|check-ip|start-proxy|stop-proxy) [vm_number]"
-    echo "       $0 (deploy|status-all|start-all|stop-all)"
+    echo "       $0 (deploy|status-all|start-all|stop-all|pause-all|resume-all)"
     exit 1
 }
 
@@ -452,11 +503,14 @@ function get_vm_numbers {
     echo $vm_numbers
 }
 
+# usage: is_running vm_number
 # returns 0 if vm running, 1 otherwise
 function is_running()
 {
-    output=`$VBOXMANAGE list runningvms | grep -oF "$1"`
-    if [ "$output" == "$1" ]; then
+    local vm_number=$1
+    local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+    output=`$VBOXMANAGE list runningvms | grep -oF "$vm_name"`
+    if [ "$output" == "$vm_name" ]; then
         echo "true"
         return 0
     else
@@ -465,25 +519,44 @@ function is_running()
     fi
 }
 
+# usage: is_paused vm_number
+# returns 0 if vm paused, 1 otherwise
+function is_paused {
+    local vm_number=$1
+    local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+
+    output=`$VBOXMANAGE showvminfo "$vm_name" | grep 'State:' | sed s'/ //'g | cut -d':' -f2 | cut -d'(' -f1`
+    if [ "$output" == "paused" ]; then
+        echo "true"
+        return 0
+    else
+        echo "false"
+        return 1
+    fi
+}
+
+# usage: startvm vm_number
 function startvm()
 {
-    local running=`is_running "$1"`
+    local vm_number=$1
+    local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+
+    local running=`is_running "$vm_number"`
     if [ "$running" == "true" ]; then
        return 0;
     fi
-    echo "Starting vm ${1}..."
-    $VBOXMANAGE startvm "$1" --type headless
+    echo "Starting vm ${vm_name}..."
+    $VBOXMANAGE startvm "$vm_name" --type headless
     return $?
 }
 
-# usage: getuplicip vm_number
+# usage: getpublicip vm_number
 function getpublicip()
 {
     local vm_number=$1
     local vm_host_ip="${BASE_IP}$(($vm_number+1))"
-    local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-    local running=`is_running "$vm_name"`
+    local running=`is_running "$vm_number"`
     if [ "$running" == "false" ]; then
        return 1;
     fi
@@ -619,10 +692,11 @@ function acpipoweroffvm()
 # usage: waitonip vm_ip
 function waitonip()
 {
+    local vm_ip=$1
     local status=1
     local start=`date +%s`
     while [ "$status" -ne 0 ]; do
-        $SSH ${SCRIPT_USER}@${1} "echo Host $1 is now up." 2>/dev/null
+        $SSH ${SCRIPT_USER}@${1} "echo VM on host-ip $vm_ip is now up." 2>/dev/null
         status=$?
 
         local now=`date +%s`
@@ -638,22 +712,23 @@ function waitonip()
 function waitpoweroff()
 {
     local vm_number=$1
+    local vm_ip=$2
     local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
 
-    local running=`is_running "$vm_name"`
+    local running=`is_running "$vm_number"`
     if [ "$running" == "false" ]; then
        return 0;
     fi
 
     echo "Attempting to shut down vm ${vm_name}..."
-    acpipoweroffvm "$vm_number" "$2"
+    acpipoweroffvm "$vm_number" "$vm_ip"
 
     local start=`date +%s`
     local runtime=0
     while [ "$runtime" -lt "$MAX_POWEROFF_WAIT" ]; do
-        running=`is_running "$vm_name"`
+        running=`is_running "$vm_number"`
         if [ "$running" == "false" ]; then
-            echo "Successfully shut down vm ${1}."
+            echo "Successfully shut down vm ${vm_name}."
             return 0;
         fi
 
