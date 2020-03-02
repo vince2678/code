@@ -584,7 +584,7 @@ function startsocksproxy()
 
     echo "Starting socks tunnel on port ${socks_port} through ${vm_host_ip}..."
     $DAEMON -F ${SOCKS_PID_DIR}/${socks_service}.pid -n ${socks_service} -- \
-            $SSH -D ${socks_port} -q -C -N ${SCRIPT_USER}@${vm_host_ip}
+            $SSH -D "*:${socks_port}" -q -C -N ${SCRIPT_USER}@${vm_host_ip}
 
     return $?
 }
