@@ -8,9 +8,9 @@ REALPATH="/usr/bin/realpath"
 
 SCRIPT_USER="vincent"
 
-MAIN_VM="Debian [VPN-1]"
-MAIN_VM_NUMBER=1
-MAIN_IP="192.168.56.2"
+MAIN_VM="Debian [VPN-0]"
+MAIN_VM_NUMBER=0
+MAIN_IP="192.168.56.240"
 MAIN_SNAPSHOT="VPN_Snapshot"
 
 SEARCH_REGEXP="Debian \[VPN\-[0-9]*\]"
