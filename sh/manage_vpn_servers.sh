@@ -484,8 +484,16 @@ function help()
 }
 
 function get_next_number {
-    LAST=`$VBOXMANAGE list vms | grep -o "$SEARCH_REGEXP" | grep -o "[0-9]*" | sort -n | tail -n 1`
-    echo $(($LAST+1))
+    p=$(($MAIN_VM_NUMBER-1))
+    for i in `get_vm_numbers`; do
+        if [ "$i" -ne "$(($p+1))" ]; then
+            echo $(($p+1));
+            return
+            break;
+        fi;
+    p=$i;
+    done;
+    echo $(($p+1))
 }
 
 # Usage: is_valid_number vm_number
