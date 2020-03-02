@@ -334,6 +334,8 @@ function main_fn()
             local vm_hostname="${HOSTNAME_PREFIX}$(($vm_number))"
             local vm_host_ip="${BASE_IP}$(($vm_number+1))"
 
+            main_running=`is_running "$MAIN_VM_NUMBER"`
+
             main_fn stop "$MAIN_VM_NUMBER"
             if [ "$?" -ne 0 ]; then
                 return 1
@@ -415,9 +417,11 @@ function main_fn()
             fi
 
             # start the main
-            main_fn start "$MAIN_VM_NUMBER"
-            if [ "$?" -ne 0 ]; then
-                 echo "Failed to start main vm"
+            if [ "$main_running" == "true" ]; then
+                main_fn start "$MAIN_VM_NUMBER"
+                if [ "$?" -ne 0 ]; then
+                     echo "Failed to start main vm"
+                fi
             fi
 
             return $status
