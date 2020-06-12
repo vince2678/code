@@ -10,7 +10,7 @@ SCRIPT_USER="vincent"
 
 MAIN_VM="Debian [VPN-0]"
 MAIN_VM_NUMBER=0
-MAIN_IP="192.168.56.240"
+MAIN_IP="192.168.56.1"
 MAIN_SNAPSHOT="VPN_Snapshot"
 
 SEARCH_REGEXP="Debian \[VPN\-[0-9]*\]"
@@ -115,6 +115,75 @@ function main_fn()
             echo $ip
             return 0
             ;;
+        "stop-vpn")
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+
+            if [ -z "$vm_number" ]; then
+                help
+            fi
+
+            is_valid_number $vm_number
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                return 1
+            fi
+
+            local running=`is_running "$vm_number"`
+            if [ "$running" == "false" ]; then
+                echo "VM ${vm_name} is not running"
+                return 1
+            fi
+
+	    stopvpn $vm_number
+	    return $?
+	    ;;
+        "start-vpn")
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+
+            if [ -z "$vm_number" ]; then
+                help
+            fi
+
+            is_valid_number $vm_number
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                return 1
+            fi
+
+            local running=`is_running "$vm_number"`
+            if [ "$running" == "false" ]; then
+                echo "VM ${vm_name} is not running"
+                return 1
+            fi
+
+	    startvpn $vm_number
+	    return $?
+	    ;;
+        "restart-vpn")
+            local vm_number=$2
+            local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
+
+            if [ -z "$vm_number" ]; then
+                help
+            fi
+
+            is_valid_number $vm_number
+            if [ "$?" -ne 0 ]; then
+                echo "No such vm number"
+                return 1
+            fi
+
+            local running=`is_running "$vm_number"`
+            if [ "$running" == "false" ]; then
+                echo "VM ${vm_name} is not running"
+                return 1
+            fi
+
+	    restartvpn $vm_number
+	    return $?
+	    ;;
         "pause")
             local vm_number=$2
             local vm_name="${BASE_CLONE_PREFIX}${vm_number}${BASE_CLONE_SUFFIX}"
@@ -479,6 +548,7 @@ function help()
 {
     echo "Usage: $0 (start|pause|resume|stop|status|delete) [vm_number]"
     echo "       $0 (connect|check-ip|start-proxy|stop-proxy) [vm_number]"
+    echo "       $0 (start-vpn|stop-vpn|restart-vpn) [vm_number]"
     echo "       $0 (deploy|status-all|start-all|stop-all|pause-all|resume-all)"
     exit 1
 }
@@ -573,6 +643,49 @@ function getpublicip()
        return 1;
     fi
     $SSH ${SCRIPT_USER}@${vm_host_ip} curl http://ifconfig.me/ip 2>/dev/null
+    return $?
+}
+
+# usage: stopvpn vm_number
+function stopvpn()
+{
+    local vm_number=$1
+    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+
+    local running=`is_running "$vm_number"`
+    if [ "$running" == "false" ]; then
+       return 1;
+    fi
+    $SSH root@${vm_host_ip} /etc/monit/windscribe-wrapper.sh stop
+    return $?
+}
+
+# usage: startvpn vm_number
+function startvpn()
+{
+    local vm_number=$1
+    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+
+    local running=`is_running "$vm_number"`
+    if [ "$running" == "false" ]; then
+       return 1;
+    fi
+    $SSH root@${vm_host_ip} /etc/monit/windscribe-wrapper.sh start
+    return $?
+}
+
+# usage: restartvpn vm_number
+function restartvpn()
+{
+    local vm_number=$1
+    local vm_host_ip="${BASE_IP}$(($vm_number+1))"
+
+    local running=`is_running "$vm_number"`
+    if [ "$running" == "false" ]; then
+       return 1;
+    fi
+    $SSH root@${vm_host_ip} /etc/monit/windscribe-wrapper.sh stop 2>/dev/null
+    $SSH root@${vm_host_ip} /etc/monit/windscribe-wrapper.sh start
     return $?
 }
 
